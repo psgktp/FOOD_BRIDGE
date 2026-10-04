@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Donation #{{ donation.id }} | FoodBridge{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="{{ urgency_info.badge_class }} mb-1">{{ urgency_info.label }}</span>
+            <h2 class="fw-bold text-dark mb-0">{{ donation.title }}</h2>
+            <div class="small text-secondary">Donation ID: #FB-{{ donation.id }} | Posted {{ donation.created_at.strftime('%H:%M, %d %b %Y') }}</div>
+        </div>
+        <a href="{{ url_for('donor.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Donor Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Verification QR Code & OTP Handshake Box -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center">
+                <span class="badge bg-dark text-warning fw-bold small text-uppercase mb-2 mx-auto">
+                    <i class="bi bi-shield-lock-fill me-1"></i> Chain-of-Custody Handshake
+                </span>
+                <h5 class="fw-bold text-dark mb-1">Donor Pickup Verification</h5>
+                <p class="small text-secondary mb-3">
+                    Present this dynamic QR code or 6-digit OTP to the arriving volunteer/driver to authorize physical custody transfer.
+                </p>
+
+                <div class="qr-container mb-3 mx-auto">
+                    <img src="{{ qr_image_b64 }}" alt="Pickup QR Code" class="img-fluid" style="max-width: 220px;">
+                </div>
+
+                <div class="mb-3">
+                    <div class="small text-muted mb-1">Pickup Verification OTP</div>
+                    <div class="otp-code-box">{{ donation.donor_pickup_code }}</div>
+                </div>
+
+                <div class="alert alert-light border small text-start mb-0">
+                    <i class="bi bi-info-circle text-primary me-1"></i>
+                    Status: <strong class="text-uppercase text-dark">{{ donation.status.replace('_', ' ') }}</strong><br>
+                    Once scanned, the system automatically transitions state to <code class="text-danger">IN_TRANSIT</code>.
+                </div>
+            </div>
+        </div>
+
+        <!-- Specifications & Smart Match Engine Results -->
+        <div class="col-lg-7">
+            <!-- Details Card -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-list-check text-success me-2"></i>Batch Metadata & Telemetry</h5>
+                
+                <div class="row g-3 small">
+                    <div class="col-6 col-md-4">
+                        <span class="text-secondary d-block">Available Quantity:</span>
+                        <strong class="fs-6 text-success">{{ donation.remaining_meals }} / {{ donation.quantity_meals }} Meals</strong>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <span class="text-secondary d-block">Total Weight:</span>
+                        <strong class="fs-6 text-dark">{{ donation.weight_approx_kg }} kg</strong>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <span class="text-secondary d-block">Dietary Type:</span>
+                        <strong class="fs-6 text-dark">{{ donation.dietary_type.title() }}</strong>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <span class="text-secondary d-block">Storage Type:</span>
+                        <strong class="text-dark">{{ donation.storage_condition.replace('_', ' ').title() }}</strong>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <span class="text-secondary d-block">Safe Buffer Remaining:</span>
+                        <strong class="text-danger">{{ "%.1f"|format(donation.hours_remaining) }} Hours</strong>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <span class="text-secondary d-block">Estimated CO₂e Diverted:</span>
+                        <strong class="text-primary">{{ "%.1f"|format(donation.weight_approx_kg * 2.5) }} kg</strong>
+                    </div>
+                    <div class="col-12 pt-2 border-top">
+                        <span class="text-secondary d-block">Pickup Address:</span>
+                        <div class="text-dark fw-semibold"><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ donation.pickup_address_text }}</div>
+                        {% if donation.pickup_instructions %}
+                            <div class="text-muted small mt-1"><i class="bi bi-megaphone me-1"></i> {{ donation.pickup_instructions }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Smart Matches from Engine -->
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-stars text-warning me-2"></i>Engine Smart-Matched Recipients</h5>
+                    <span class="badge bg-primary-subtle text-primary">Live Heuristic</span>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Ranked by Haversine distance, urgency-to-spoilage, intake capacity, and dietary compatibility.
+                </p>
+
+                {% if top_matches %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for match in top_matches %}
+                            <div class="border rounded-3 p-3 bg-light d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <h6 class="fw-bold text-dark mb-0">{{ match.org_profile.org_name }}</h6>
+                                        <span class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">{{ match.org_profile.org_type }}</span>
+                                    </div>
+                                    <div class="small text-secondary">
+                                        <i class="bi bi-geo-alt text-danger"></i> {{ match.distance_km }} km away &bull;
+                                        <i class="bi bi-box-seam text-primary"></i> Cap: {{ match.org_profile.remaining_capacity }} open
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="match-score-pill bg-success-subtle text-success border border-success-subtle">
+                                        {{ match.score }}% Match
+                                    </span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-light border small text-muted text-center mb-0">No active shelters within search radius at this moment.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

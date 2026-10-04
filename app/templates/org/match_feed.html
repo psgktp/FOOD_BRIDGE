@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Smart Match Feed & Knapsack Pooling | FoodBridge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-stars text-warning me-2"></i>Smart Match & Demand Pooling Feed</h2>
+            <p class="text-secondary small mb-0">
+                Surplus candidates scored using distance, urgency decay, capacity compatibility, and dietary fit.
+            </p>
+        </div>
+        <div>
+            <!-- Dropdown to select active need for N:1 pooling -->
+            <form method="GET" action="{{ url_for('org.match_feed') }}" class="d-flex align-items-center gap-2">
+                <label class="small text-secondary fw-semibold text-nowrap">Filter for Need Request:</label>
+                <select name="need_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">General Intake</option>
+                    {% for n in open_needs %}
+                        <option value="{{ n.id }}" {% if active_need and active_need.id == n.id %}selected{% endif %}>
+                            #{{ n.id }}: {{ n.title[:30] }}... (Needs {{ n.remaining_deficit }} meals)
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <!-- N:1 Multi-Donor Knapsack Pooling Card (If active need selected) -->
+    {% if knapsack_pool and knapsack_pool.manifest %}
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-5 bg-dark text-white border-start border-4 border-warning">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <span class="badge bg-warning text-dark fw-bold mb-1">
+                        <i class="bi bi-diagram-3-fill me-1"></i> Multi-Donor N:1 Pooling Engine
+                    </span>
+                    <h4 class="fw-bold text-white mb-0">Aggregated Rescue Manifest for "{{ active_need.title }}"</h4>
+                    <div class="small text-light text-opacity-75">
+                        Target Requirement: <strong>{{ knapsack_pool.target_meals }} meals</strong> &bull;
+                        Total Pooled across candidates: <strong class="text-success">{{ knapsack_pool.total_pooled_meals }} meals</strong>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('org.claim_knapsack_pool') }}">
+                    <input type="hidden" name="need_request_id" value="{{ active_need.id }}">
+                    <button type="submit" class="btn btn-success fw-bold shadow">
+                        <i class="bi bi-check2-all me-1"></i> Accept Pooled Multi-Stop Manifest
+                    </button>
+                </form>
+            </div>
+
+            <!-- Manifest Sub-Donors -->
+            <div class="row g-3">
+                {% for item in knapsack_pool.manifest %}
+                    {% set don = item.donation %}
+                    <div class="col-md-4">
+                        <div class="bg-secondary bg-opacity-25 p-3 rounded-3 border border-secondary border-opacity-50">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="text-warning small">Donor #{{ don.id }}</strong>
+                                <span class="badge bg-success">+{{ item.allocated_meals }} meals</span>
+                            </div>
+                            <div class="fw-bold text-white small mb-1">{{ don.title }}</div>
+                            <div class="small text-light text-opacity-75 mb-2"><i class="bi bi-geo-alt"></i> {{ item.distance_km }} km away &bull; {{ item.hours_remaining }}h buffer</div>
+                            <div class="small text-muted">{{ don.pickup_address_text[:35] }}...</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Ranked Individual Candidate Matches -->
+    <h4 class="fw-bold text-dark mb-3"><i class="bi bi-list-nested text-primary me-2"></i>Ranked Available Surplus Batches</h4>
+    
+    {% if matches %}
+        <div class="row g-4">
+            {% for item in matches %}
+                {% set don = item.donation %}
+                {% set u_info = item.urgency_info %}
+                {% set breakdown = item.breakdown %}
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden {{ u_info.border_class }} border-top border-4">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="match-score-pill bg-success-subtle text-success border border-success-subtle fw-bold">
+                                    {{ item.score }}% Match
+                                </span>
+                                <span class="{{ u_info.badge_class }}">{{ u_info.label }}</span>
+                            </div>
+
+                            <h5 class="fw-bold text-dark mb-1">{{ don.title }}</h5>
+                            {% if don.is_campus_event %}
+                                <div class="badge bg-dark text-warning small mb-2"><i class="bi bi-mortarboard-fill me-1"></i> {{ don.event_name }}</div>
+                            {% endif %}
+                            
+                            <div class="text-secondary small mb-3">
+                                <i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ item.distance_km }} km away &bull; {{ don.pickup_address_text }}
+                            </div>
+
+                            <!-- Algorithmic Score Breakdown Accordion / Pills -->
+                            <div class="bg-light p-3 rounded-3 mb-3 small">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Available Quantity:</span>
+                                    <strong class="text-success">{{ don.remaining_meals }} / {{ don.quantity_meals }} meals</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Dietary:</span>
+                                    <strong class="text-dark">{{ don.dietary_type.title() }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Safe Buffer:</span>
+                                    <strong class="text-danger">{{ "%.1f"|format(don.hours_remaining) }} hrs</strong>
+                                </div>
+                            </div>
+
+                            <!-- Claim Form (Supports Partial Claim) -->
+                            <div class="mt-auto">
+                                <form method="POST" action="{{ url_for('org.claim_donation', donation_id=don.id) }}">
+                                    {% if active_need %}
+                                        <input type="hidden" name="need_request_id" value="{{ active_need.id }}">
+                                    {% endif %}
+                                    <div class="input-group input-group-sm mb-2">
+                                        <span class="input-group-text bg-white text-secondary small">Meals:</span>
+                                        <input type="number" class="form-control" name="claim_quantity" min="5" max="{{ don.remaining_meals }}" value="{{ don.remaining_meals }}">
+                                        <button type="submit" class="btn btn-success fw-bold">
+                                            <i class="bi bi-check2"></i> Claim
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-light border rounded-4 p-4 text-center">No available surplus listings in range right now.</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Volunteer Dispatch Hub | FoodBridge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header with Karma Score and Rescues count -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="fw-bold text-dark mb-0">{{ current_user.full_name }}</h2>
+                <span class="badge bg-info text-white"><i class="bi bi-bicycle me-1"></i> {{ current_user.volunteer_profile.transport_mode.replace('_', ' ').title() }}</span>
+            </div>
+            <p class="text-secondary small mb-0">Food Rescue Volunteer Logistics Partner</p>
+        </div>
+        <div class="d-flex gap-3 mt-3 mt-md-0">
+            <div class="bg-white border rounded-3 px-3 py-2 text-center shadow-sm">
+                <div class="text-warning fw-bold fs-5"><i class="bi bi-award-fill text-warning me-1"></i> {{ current_user.volunteer_profile.impact_credits }}</div>
+                <div class="small text-secondary fw-semibold" style="font-size: 0.7rem;">Impact Credits (IC)</div>
+            </div>
+            <div class="bg-white border rounded-3 px-3 py-2 text-center shadow-sm">
+                <div class="text-success fw-bold fs-5"><i class="bi bi-check2-circle"></i> {{ current_user.volunteer_profile.total_rescues_completed }}</div>
+                <div class="small text-secondary" style="font-size: 0.7rem;">Rescues Done</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Claimed Task Tracker (If any) -->
+    {% if my_active_tasks %}
+        <div class="mb-5">
+            <h4 class="fw-bold text-dark mb-3"><i class="bi bi-geo-alt-fill text-danger me-2"></i>My In-Progress Rescue Mission</h4>
+            <div class="row g-3">
+                {% for task in my_active_tasks %}
+                    {% set don = task.allocation.donation %}
+                    {% set org = task.allocation.organization %}
+                    <div class="col-md-12">
+                        <div class="card border-0 shadow rounded-4 p-4 bg-dark text-white border-start border-4 border-warning">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start mb-3">
+                                <div>
+                                    <span class="badge bg-warning text-dark fw-bold mb-1">
+                                        <i class="bi bi-truck me-1"></i> {{ task.status.replace('_', ' ').upper() }}
+                                    </span>
+                                    <h4 class="fw-bold text-white mb-0">{{ don.title }} ({{ task.allocation.claimed_meals }} Meals)</h4>
+                                </div>
+                                <a href="{{ url_for('volunteer.track_task', task_id=task.id) }}" class="btn btn-success fw-bold px-4 py-2 shadow mt-2 mt-md-0">
+                                    Open Mission Tracker & Verification <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+
+                            <div class="row g-3 small text-light text-opacity-75">
+                                <div class="col-md-6">
+                                    <div class="bg-secondary bg-opacity-25 p-3 rounded-3 border border-secondary border-opacity-50">
+                                        <strong class="text-warning d-block mb-1"><i class="bi bi-geo-alt"></i> Step 1: Donor Pickup Location</strong>
+                                        <div>{{ don.pickup_address_text }}</div>
+                                        <div class="text-muted mt-1">Instructions: {{ don.pickup_instructions or 'Contact catering incharge' }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="bg-secondary bg-opacity-25 p-3 rounded-3 border border-secondary border-opacity-50">
+                                        <strong class="text-info d-block mb-1"><i class="bi bi-building"></i> Step 2: Recipient Handover Center</strong>
+                                        <div>{{ org.org_profile.org_name if org.org_profile else org.full_name }}</div>
+                                        <div>{{ org.addresses.first().street_address if org.addresses.first() else 'Saidapet Relief Center' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Nearby Available Rescue Tasks to Claim -->
+    <div class="mb-5">
+        <h4 class="fw-bold text-dark mb-3"><i class="bi bi-broadcast text-warning me-2"></i>Nearby Available Rescue Manifests</h4>
+        {% if available_tasks %}
+            <div class="row g-4">
+                {% for item in available_tasks %}
+                    {% set task = item.task %}
+                    {% set don = item.donation %}
+                    {% set alloc = item.allocation %}
+                    {% set u_info = item.urgency_info %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden {{ u_info.border_class }} border-top border-4">
+                            <div class="card-body p-4 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="{{ u_info.badge_class }}">{{ u_info.label }}</span>
+                                    <span class="badge bg-light text-dark border">{{ item.dist_pickup_km }} km to pickup</span>
+                                </div>
+
+                                <h5 class="fw-bold text-dark mb-1">{{ don.title }}</h5>
+                                {% if don.is_campus_event %}
+                                    <div class="badge bg-dark text-warning small mb-2"><i class="bi bi-mortarboard-fill me-1"></i> {{ don.event_name }}</div>
+                                {% endif %}
+
+                                <div class="small text-secondary mb-3">
+                                    <i class="bi bi-box-seam text-success"></i> <strong>{{ alloc.claimed_meals }} meals</strong> &bull;
+                                    <i class="bi bi-clock-history text-danger"></i> {{ "%.1f"|format(don.hours_remaining) }} hrs safe buffer
+                                </div>
+
+                                <div class="bg-light p-3 rounded-3 small mb-3">
+                                    <div class="text-muted small">Pickup: {{ don.pickup_address_text[:35] }}...</div>
+                                    <div class="text-muted small">Dropoff: {{ alloc.organization.org_profile.org_name if alloc.organization.org_profile else alloc.organization.full_name }}</div>
+                                </div>
+
+                                <form method="POST" action="{{ url_for('volunteer.claim_task', task_id=task.id) }}" class="mt-auto">
+                                    <button type="submit" class="btn btn-dark w-100 fw-semibold">
+                                        <i class="bi bi-hand-index-thumb me-1"></i> Claim & Start Delivery Leg
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-light border rounded-4 p-4 text-center">
+                <p class="text-secondary mb-0">No unassigned delivery routes waiting right now. Check back as new surplus is posted.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Completed Rescues History -->
+    <div>
+        <h4 class="fw-bold text-dark mb-3"><i class="bi bi-award-fill text-warning me-2"></i>My Completed Rescues</h4>
+        {% if completed_tasks %}
+            <div class="table-responsive bg-white rounded-4 shadow-sm p-3">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="table-light text-secondary">
+                        <tr>
+                            <th>Mission ID</th>
+                            <th>Surplus Item</th>
+                            <th>Meals Delivered</th>
+                            <th>Recipient Org</th>
+                            <th>Verified Time</th>
+                            <th>Impact Credits</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in completed_tasks %}
+                            <tr>
+                                <td class="fw-bold">#{{ t.id }}</td>
+                                <td>{{ t.allocation.donation.title }}</td>
+                                <td class="fw-bold text-success">{{ t.allocation.claimed_meals }} Meals</td>
+                                <td>{{ t.allocation.organization.org_profile.org_name if t.allocation.organization.org_profile else t.allocation.organization.full_name }}</td>
+                                <td class="text-secondary">{{ t.delivery_verified_at.strftime('%d %b, %H:%M') if t.delivery_verified_at else '-' }}</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">+{{ t.allocation.claimed_meals * 2 }} IC</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

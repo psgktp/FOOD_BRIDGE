@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}About FoodBridge | System Architecture & Research Scope{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <!-- Header -->
+            <div class="mb-5 pb-3 border-bottom">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill fw-semibold mb-2">
+                    Research & Systems Engineering
+                </span>
+                <h1 class="fw-bold text-dark mb-2">About FoodBridge</h1>
+                <p class="lead text-secondary">A Hyperlocal, Event-Aware Surplus Food Rescue and Demand-Aggregation Platform with Multi-Stage Chain-of-Custody Verification.</p>
+            </div>
+
+            <!-- Problem & Innovation -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                <h4 class="fw-bold text-dark mb-3"><i class="bi bi-bullseye text-danger me-2"></i>The Core Problem</h4>
+                <p class="text-secondary">
+                    While food rescue platforms like Olio, Too Good To Go, Food Rescue US, and Food Rescue Hero operate globally, existing systems either rely on static directory lookups, fixed 1:1 recurring corporate routes, or manual WhatsApp coordination. In institutional environments like university campuses, food surplus is <strong>bursty, highly perishable, and fragmented</strong> across multiple small kitchens (hostel messes, symposiums, canteens).
+                </p>
+                <p class="text-secondary mb-0">
+                    <strong>FoodBridge</strong> innovates through an autonomous coordination engine that combines multi-donor aggregation, dynamic urgency decay timers, and verified cryptographic handshakes.
+                </p>
+            </div>
+
+            <!-- The 5 Signature Pillars -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                <h4 class="fw-bold text-dark mb-4"><i class="bi bi-layers-fill text-primary me-2"></i>The 5 Signature Technical Pillars</h4>
+                
+                <div class="d-flex flex-column gap-4">
+                    <div class="border-start border-4 border-primary ps-3">
+                        <h5 class="fw-bold text-dark mb-1">1. Multi-Factor Need-to-Surplus Matching</h5>
+                        <p class="small text-secondary mb-0">
+                            Instead of simple proximity, candidates are scored using a weighted multi-factor heuristic:
+                            <code>Score = 0.35(Distance) + 0.30(Urgency) + 0.20(Capacity) + 0.15(Dietary)</code>.
+                        </p>
+                    </div>
+
+                    <div class="border-start border-4 border-warning ps-3">
+                        <h5 class="fw-bold text-dark mb-1">2. Multi-Donor Resource Aggregation (N:1 Knapsack Pooling)</h5>
+                        <p class="small text-secondary mb-0">
+                            When an NGO shelter requires 200 meals, the algorithm pools surplus from multiple small donors (e.g. 70 + 80 + 50 meals) into a unified multi-stop volunteer manifest.
+                        </p>
+                    </div>
+
+                    <div class="border-start border-4 border-danger ps-3">
+                        <h5 class="fw-bold text-dark mb-1">3. Dynamic Food Urgency & Spoilage Decay</h5>
+                        <p class="small text-secondary mb-0">
+                            Classifies listings into 4 real-time urgency tiers (Green &gt; 4h, Yellow 2-4h, Orange 1-2h, Red &lt; 1h), dynamically expanding volunteer notification radii as spoilage approaches.
+                        </p>
+                    </div>
+
+                    <div class="border-start border-4 border-success ps-3">
+                        <h5 class="fw-bold text-dark mb-1">4. Campus Event Fast-Track Mode</h5>
+                        <p class="small text-secondary mb-0">
+                            1-Click rapid surplus declaration interface tailored specifically for college symposiums, cultural fests, hackathons, and hostel messes.
+                        </p>
+                    </div>
+
+                    <div class="border-start border-4 border-info ps-3">
+                        <h5 class="fw-bold text-dark mb-1">5. Dual-Stage Cryptographic Chain-of-Custody (CoC)</h5>
+                        <p class="small text-secondary mb-0">
+                            Enforces physical QR and 6-digit OTP verification at both Donor pickup and NGO handover points to guarantee safety and prevent fraud.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technology Stack -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h4 class="fw-bold text-dark mb-3"><i class="bi bi-cpu-fill text-success me-2"></i>Technology Stack</h4>
+                <div class="row g-3 small">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3">
+                            <strong class="d-block text-dark mb-1">Backend</strong>
+                            <span class="text-secondary">Python 3.13, Flask, Flask-SQLAlchemy, Werkzeug, Flask-Login</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3">
+                            <strong class="d-block text-dark mb-1">GIS & Mapping</strong>
+                            <span class="text-secondary">Leaflet.js, OpenStreetMap, Leaflet.heat (Kernel Density Heatmaps)</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3">
+                            <strong class="d-block text-dark mb-1">Security & Handshake</strong>
+                            <span class="text-secondary">QRCode (PIL), Dynamic UUID Tokens, Dual OTP handshakes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

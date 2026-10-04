@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}NGO Operations Portal | FoodBridge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="fw-bold text-dark mb-0">{{ current_user.org_profile.org_name if current_user.org_profile else current_user.full_name }}</h2>
+                <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i> Verified Agency</span>
+            </div>
+            <p class="text-secondary small mb-0">Food Bank & Shelter Relief Distribution Center</p>
+        </div>
+        <div class="d-flex gap-2 mt-3 mt-md-0">
+            <a href="{{ url_for('org.post_need') }}" class="btn btn-warning text-dark fw-bold d-flex align-items-center gap-2 shadow-sm">
+                <i class="bi bi-plus-circle"></i> Post Food Deficit / Need
+            </a>
+            <a href="{{ url_for('org.match_feed') }}" class="btn btn-dark d-flex align-items-center gap-2 shadow-sm">
+                <i class="bi bi-stars text-warning"></i> Smart Match Feed
+            </a>
+        </div>
+    </div>
+
+    <!-- Live Capacity & Telemetry Gauge Widget -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-speedometer2 text-primary me-2"></i>Live Shelter Capacity Telemetry</h5>
+                <span class="small text-secondary">Broadcasted in real-time to prevent surplus overfilling</span>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#capacityForm">
+                <i class="bi bi-sliders"></i> Adjust Capacity
+            </button>
+        </div>
+
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex justify-content-between small text-dark fw-semibold mb-1">
+                    <span>Occupancy: {{ current_user.org_profile.current_occupancy }} / {{ current_user.org_profile.max_daily_capacity }} Meals</span>
+                    <span class="text-{{ 'danger' if current_user.org_profile.capacity_percentage > 85 else 'success' }}">{{ current_user.org_profile.capacity_percentage }}% Filled</span>
+                </div>
+                <div class="progress mb-2" style="height: 12px;">
+                    <div class="progress-bar bg-{{ 'danger' if current_user.org_profile.capacity_percentage > 85 else 'success' }}" role="progressbar" style="width: {{ current_user.org_profile.capacity_percentage }}%;"></div>
+                </div>
+                <div class="small text-muted">
+                    Available intake buffer: <strong class="text-success">{{ current_user.org_profile.remaining_capacity }} meals</strong>.
+                    Status: <span class="badge bg-{{ 'success' if current_user.org_profile.is_accepting_donations else 'secondary' }}">{{ 'Accepting Donations' if current_user.org_profile.is_accepting_donations else 'Intake Paused' }}</span>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <div class="p-2 bg-light rounded-3 d-inline-block text-start small">
+                    <div><i class="bi bi-clock text-secondary me-1"></i> Intake Hours: {{ current_user.org_profile.operating_hours_start }} - {{ current_user.org_profile.operating_hours_end }}</div>
+                    <div><i class="bi bi-check2-circle text-success me-1"></i> Total Rescued: {{ total_meals_received }} Meals</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collapsible Capacity Adjust Form -->
+        <div class="collapse mt-3 pt-3 border-top" id="capacityForm">
+            <form method="POST" action="{{ url_for('org.update_capacity') }}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small text-secondary">Max Capacity (Meals)</label>
+                        <input type="number" class="form-control form-control-sm" name="max_daily_capacity" value="{{ current_user.org_profile.max_daily_capacity }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-secondary">Current Stocked (Meals)</label>
+                        <input type="number" class="form-control form-control-sm" name="current_occupancy" value="{{ current_user.org_profile.current_occupancy }}">
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="acceptDonations" name="is_accepting_donations" {% if current_user.org_profile.is_accepting_donations %}checked{% endif %}>
+                            <label class="form-check-label small" for="acceptDonations">Accepting</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-sm btn-dark w-100">Save</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Active Inbound Deliveries -->
+    <div class="mb-5">
+        <h4 class="fw-bold text-dark mb-3"><i class="bi bi-truck text-info me-2"></i>Inbound Surplus Deliveries</h4>
+        {% if active_allocations %}
+            <div class="row g-3">
+                {% for alloc in active_allocations %}
+                    {% set don = alloc.donation %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 p-4 border-start border-4 border-info">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-info text-white text-uppercase">{{ alloc.status.replace('_', ' ') }}</span>
+                                <strong class="text-success fs-5">{{ alloc.claimed_meals }} Meals</strong>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-1">{{ don.title }}</h5>
+                            <div class="small text-secondary mb-3"><i class="bi bi-building"></i> Donor: {{ don.donor.donor_profile.institution_name if don.donor.donor_profile else don.donor.full_name }}</div>
+                            
+                            <div class="bg-light p-2 rounded-3 small mb-3">
+                                <div><i class="bi bi-clock-history text-danger me-1"></i> Spoilage Buffer: {{ "%.1f"|format(don.hours_remaining) }} hrs</div>
+                                <div><i class="bi bi-person-badge text-primary me-1"></i> Volunteer: {{ alloc.delivery_task.volunteer.full_name if alloc.delivery_task.volunteer else 'Awaiting Assignment' }}</div>
+                            </div>
+
+                            <a href="{{ url_for('org.verify_receipt', allocation_id=alloc.id) }}" class="btn btn-success btn-sm w-100 fw-bold">
+                                <i class="bi bi-qr-code-scan me-1"></i> Verify Handshake Receiving
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-light border rounded-4 p-4 text-center">
+                <p class="text-secondary mb-2">No active deliveries en-route to your distribution center.</p>
+                <a href="{{ url_for('org.match_feed') }}" class="btn btn-dark btn-sm">Browse Smart Match Feed</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Active Open Need Postings -->
+    <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-dark mb-0"><i class="bi bi-megaphone-fill text-warning me-2"></i>My Active Need Postings on Heatmap</h4>
+            <a href="{{ url_for('org.post_need') }}" class="btn btn-sm btn-outline-warning text-dark fw-semibold">+ New Deficit</a>
+        </div>
+        
+        {% if open_needs %}
+            <div class="row g-3">
+                {% for need in open_needs %}
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0">{{ need.title }}</h6>
+                                    <div class="small text-secondary"><i class="bi bi-geo-alt"></i> {{ need.location_name }}</div>
+                                </div>
+                                <span class="badge bg-warning text-dark fw-bold">{{ need.remaining_deficit }} meals open</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 6px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ need.fulfillment_percentage }}%;"></div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small text-secondary">
+                                <span>Fulfilled: {{ need.meals_fulfilled }} / {{ need.target_meals_required }} meals</span>
+                                <a href="{{ url_for('org.match_feed', need_id=need.id) }}" class="btn btn-sm btn-dark py-0 px-2 rounded-pill">
+                                    <i class="bi bi-stack me-1"></i> Knapsack Pool
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-light border rounded-4 p-3 text-muted small text-center">No active need postings. Post a deficit to appear on the Food Need Heatmap.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

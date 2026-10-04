@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Live Rescue Tracker #{{ task.id }} | FoodBridge{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-warning text-dark fw-bold text-uppercase">{{ task.status.replace('_', ' ') }}</span>
+                <span class="{{ urgency_info.badge_class }}">{{ urgency_info.label }}</span>
+            </div>
+            <h2 class="fw-bold text-dark mb-0">Rescue Route: {{ donation.title }}</h2>
+            <div class="small text-secondary">Mission ID #{{ task.id }} &bull; Quantity: <strong>{{ allocation.claimed_meals }} meals</strong></div>
+        </div>
+        <a href="{{ url_for('volunteer.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volunteer Hub
+        </a>
+    </div>
+
+    <!-- Stepper Progress Bar -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="row text-center g-2">
+            <div class="col-4">
+                <div class="p-2 rounded-3 bg-success-subtle text-success fw-bold small mb-1">
+                    <i class="bi bi-check-circle-fill me-1"></i> 1. Mission Claimed
+                </div>
+                <div class="small text-muted" style="font-size: 0.75rem;">Volunteer Assigned</div>
+            </div>
+            <div class="col-4">
+                <div class="p-2 rounded-3 {% if task.status in ['in_transit', 'delivered'] %}bg-success-subtle text-success{% else %}bg-warning-subtle text-dark{% endif %} fw-bold small mb-1">
+                    <i class="bi {% if task.status in ['in_transit', 'delivered'] %}bi-check-circle-fill{% else %}bi-arrow-repeat{% endif %} me-1"></i> 2. Pickup Handshake
+                </div>
+                <div class="small text-muted" style="font-size: 0.75rem;">Donor Physical Verification</div>
+            </div>
+            <div class="col-4">
+                <div class="p-2 rounded-3 {% if task.status == 'delivered' %}bg-success-subtle text-success{% else %}bg-light text-secondary{% endif %} fw-bold small mb-1">
+                    <i class="bi {% if task.status == 'delivered' %}bi-check-circle-fill{% else %}bi-clock{% endif %} me-1"></i> 3. NGO Delivery
+                </div>
+                <div class="small text-muted" style="font-size: 0.75rem;">Recipient Verification</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Interactive Leaflet Map -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-map-fill text-primary me-2"></i>Multi-Leg Geo-Navigation</h5>
+                <div id="routeMap"></div>
+                <div class="d-flex justify-content-between small text-secondary mt-2 px-1">
+                    <span><i class="bi bi-pin-map-fill text-success"></i> Green: Donor Pickup</span>
+                    <span><i class="bi bi-geo-alt-fill text-danger"></i> Red: NGO Destination</span>
+                </div>
+            </div>
+
+            <!-- Address Reference Cards -->
+            <div class="row g-3 small">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+                        <strong class="text-success d-block mb-1"><i class="bi bi-box-arrow-up-right me-1"></i> Step 1: Collect from Donor</strong>
+                        <div class="fw-bold text-dark">{{ donation.donor.donor_profile.institution_name if donation.donor.donor_profile else donation.donor.full_name }}</div>
+                        <div class="text-secondary mt-1">{{ donation.pickup_address_text }}</div>
+                        {% if donation.pickup_instructions %}
+                            <div class="text-muted mt-2"><i class="bi bi-megaphone"></i> {{ donation.pickup_instructions }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+                        <strong class="text-danger d-block mb-1"><i class="bi bi-box-arrow-in-down me-1"></i> Step 2: Deliver to Shelter</strong>
+                        <div class="fw-bold text-dark">{{ org_user.org_profile.org_name if org_user.org_profile else org_user.full_name }}</div>
+                        <div class="text-secondary mt-1">{{ org_user.addresses.first().street_address if org_user.addresses.first() else 'Saidapet Relief Wing' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chain-of-Custody Action Verification Column -->
+        <div class="col-lg-5">
+            {% if task.status == 'dispatched' %}
+                <!-- STEP 1: Verify Pickup -->
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-4 border-warning">
+                    <span class="badge bg-warning text-dark fw-bold small text-uppercase mb-2">Step 1 of 2</span>
+                    <h4 class="fw-bold text-dark mb-1">Donor Pickup Verification</h4>
+                    <p class="small text-secondary mb-3">
+                        Arrived at the donor location? Ask the donor for their 6-digit pickup OTP to transfer custody to <code>IN_TRANSIT</code>.
+                    </p>
+
+                    <form method="POST" action="{{ url_for('volunteer.verify_pickup', task_id=task.id) }}">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary text-uppercase">Enter Donor Pickup OTP</label>
+                            <input type="text" name="otp" class="form-control form-control-lg text-center fw-bold fs-3 letter-spacing" placeholder="••••••" maxlength="6" required>
+                            <div class="small text-muted mt-2">Demo helper: Donor OTP is <code class="text-success fw-bold">{{ donation.donor_pickup_code }}</code></div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow">
+                            <i class="bi bi-check2-circle me-1"></i> Confirm Pickup & Start Transit
+                        </button>
+                    </form>
+                </div>
+            {% elif task.status == 'in_transit' %}
+                <!-- STEP 2: Verify Handover at NGO -->
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-4 border-success">
+                    <span class="badge bg-success text-white fw-bold small text-uppercase mb-2">Step 2 of 2</span>
+                    <h4 class="fw-bold text-dark mb-1">NGO Delivery Handshake</h4>
+                    <p class="small text-secondary mb-3">
+                        Arrived at the recipient shelter? Present your delivery confirmation or ask the shelter receiver for the Handshake OTP.
+                    </p>
+
+                    <form method="POST" action="{{ url_for('volunteer.verify_delivery', task_id=task.id) }}">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary text-uppercase">Enter NGO Handshake OTP</label>
+                            <input type="text" name="otp" class="form-control form-control-lg text-center fw-bold fs-3 letter-spacing" placeholder="••••••" maxlength="6" required>
+                            <div class="small text-muted mt-2">Demo helper: NGO Delivery OTP is <code class="text-danger fw-bold">{{ donation.ngo_delivery_code }}</code></div>
+                        </div>
+
+                        <button type="submit" class="btn btn-dark btn-lg w-100 fw-bold shadow">
+                            <i class="bi bi-award-fill text-warning me-1"></i> Complete Delivery & Claim Impact Credits
+                        </button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-success text-white text-center">
+                    <div class="fs-1 mb-2"><i class="bi bi-check2-all"></i></div>
+                    <h4 class="fw-bold mb-1">Mission Completed!</h4>
+                    <p class="small text-light text-opacity-75 mb-3">You successfully rescued and delivered {{ allocation.claimed_meals }} meals.</p>
+                    <a href="{{ url_for('volunteer.dashboard') }}" class="btn btn-light text-success fw-bold">Back to Volunteer Hub</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Leaflet Route Map Initialization
+    const map = L.map('routeMap').setView([{{ donation.pickup_latitude }}, {{ donation.pickup_longitude }}], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Pickup Marker (Green)
+    const pickupMarker = L.marker([{{ donation.pickup_latitude }}, {{ donation.pickup_longitude }}], {
+        title: "Pickup: {{ donation.title }}"
+    }).addTo(map).bindPopup("<strong>Pickup Point</strong><br>{{ donation.pickup_address_text }}").openPopup();
+
+    // Dropoff Marker (Red)
+    const dropoffMarker = L.marker([{{ org_lat }}, {{ org_lng }}], {
+        title: "Dropoff: {{ org_user.full_name }}"
+    }).addTo(map).bindPopup("<strong>NGO Dropoff Point</strong><br>{{ org_user.org_profile.org_name if org_user.org_profile else org_user.full_name }}");
+
+    // Route Polyline connecting both points
+    const latlngs = [
+        [{{ donation.pickup_latitude }}, {{ donation.pickup_longitude }}],
+        [{{ org_lat }}, {{ org_lng }}]
+    ];
+    const polyline = L.polyline(latlngs, {color: '#10b981', weight: 4, dashArray: '8, 8'}).addTo(map);
+    map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
+});
+</script>
+{% endblock %}

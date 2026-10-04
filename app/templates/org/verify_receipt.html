@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Delivery Handshake | FoodBridge{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center">
+                <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold small text-uppercase mb-2 mx-auto">
+                    <i class="bi bi-shield-check me-1"></i> Delivery Handshake Protocol
+                </span>
+                <h3 class="fw-bold text-dark mb-1">Confirm Food Delivery</h3>
+                <p class="text-secondary small mb-3">
+                    Verify physical custody of <strong>{{ allocation.claimed_meals }} meals</strong> from "{{ allocation.donation.title }}".
+                </p>
+
+                <!-- Delivery Handshake QR Code -->
+                <div class="qr-container mb-3 mx-auto">
+                    <img src="{{ qr_image_b64 }}" alt="Delivery QR Code" class="img-fluid" style="max-width: 200px;">
+                </div>
+
+                <div class="mb-4">
+                    <div class="small text-muted mb-1">Or Enter Courier Handshake OTP:</div>
+                    <form method="POST" class="d-inline-block">
+                        <div class="input-group input-group-lg" style="max-width: 280px; margin: 0 auto;">
+                            <input type="text" name="otp" class="form-control text-center fw-bold fs-3 letter-spacing" placeholder="••••••" maxlength="6" required>
+                            <button type="submit" class="btn btn-success fw-bold px-3">
+                                <i class="bi bi-check2-circle"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="small text-muted mt-2">Expected OTP: <code class="text-danger fw-bold">{{ allocation.donation.ngo_delivery_code }}</code></div>
+                </div>
+
+                <div class="alert alert-light border small text-start mb-0">
+                    <i class="bi bi-info-circle text-primary me-1"></i>
+                    Submitting this confirmation:
+                    <ul class="mb-0 ps-3 mt-1">
+                        <li>Marks allocation status as <code class="text-success">DELIVERED</code></li>
+                        <li>Transfers meals to your active inventory</li>
+                        <li>Credits Volunteer Impact Credits and logs $\text{CO}_2\text{e}$ abatement</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

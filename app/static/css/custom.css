@@ -1,0 +1,157 @@
+/* FoodBridge Modern Styling */
+:root {
+  --primary-color: #10b981;
+  --primary-hover: #059669;
+  --dark-slate: #0f172a;
+  --card-bg: #ffffff;
+  --bg-subtle: #f8fafc;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-subtle);
+  color: #334155;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* Navbar */
+.navbar-brand {
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.brand-badge {
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* Glow & Urgency Effects */
+.glow-green {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+}
+
+.glow-orange {
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.35);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.45);
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.bg-orange {
+  background-color: #f97316 !important;
+}
+
+.border-orange {
+  border-color: #f97316 !important;
+}
+
+/* Stat Cards */
+.stat-card {
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: #ffffff;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+.stat-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+/* Fast-Track Card */
+.fast-track-banner {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.fast-track-banner::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Match Score Pill */
+.match-score-pill {
+  font-weight: 700;
+  border-radius: 30px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+}
+
+/* QR Code Container */
+.qr-container {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 16px;
+  display: inline-block;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  border: 2px dashed #cbd5e1;
+}
+
+.otp-code-box {
+  font-family: 'Courier New', monospace;
+  font-size: 2rem;
+  letter-spacing: 6px;
+  font-weight: 800;
+  color: #0f172a;
+  background: #f1f5f9;
+  padding: 8px 18px;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+/* Map Containers */
+#needHeatmap, #routeMap, #finderMap {
+  height: 450px;
+  width: 100%;
+  border-radius: 16px;
+  z-index: 1;
+}
+
+/* Quick Demo Login Buttons */
+.quick-login-btn {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+}

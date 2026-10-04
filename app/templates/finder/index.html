@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Food Bank Directory & Need Heatmap | FoodBridge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Food Bank Directory & Live Need Heatmap</h2>
+            <p class="text-secondary small mb-0">Discover verified hunger relief agencies and visualize active deficit zones across the city.</p>
+        </div>
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill d-flex align-items-center gap-1">
+                <i class="bi bi-fire"></i> Live Deficit Sensing Active
+            </span>
+        </div>
+    </div>
+
+    <!-- Interactive GIS Food Need Heatmap Card -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-broadcast text-warning me-2"></i>Live Food Need Density Heatmap</h5>
+            <div class="small text-secondary">
+                <span class="badge bg-success text-white me-1">🟢 Low Need</span>
+                <span class="badge bg-warning text-dark me-1">🟡 Moderate</span>
+                <span class="badge bg-danger text-white">🔴 High Need Cluster</span>
+            </div>
+        </div>
+
+        <div id="needHeatmap"></div>
+    </div>
+
+    <!-- Verified Food Banks & Shelters Directory -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-building-check text-success me-2"></i>Verified Food Banks & Pantries</h4>
+        <div class="small text-secondary">{{ food_banks|length }} Registered Relief Centers</div>
+    </div>
+
+    <!-- Search Form -->
+    <form method="GET" action="{{ url_for('finder.index') }}" class="mb-4">
+        <div class="input-group input-group-lg shadow-sm rounded-4 overflow-hidden border">
+            <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" class="form-control border-0" name="q" placeholder="Search by food bank name, area, or keywords..." value="{{ query_text }}">
+            <button type="submit" class="btn btn-success px-4 fw-semibold">Search</button>
+        </div>
+    </form>
+
+    <div class="row g-4">
+        {% for fb in food_banks %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm rounded-4 p-4 bg-white d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge bg-secondary text-uppercase" style="font-size: 0.7rem;">{{ fb.type }}</span>
+                        <span class="badge bg-{{ 'success' if fb.is_accepting else 'secondary' }}">
+                            {{ 'Accepting Surplus' if fb.is_accepting else 'Intake Paused' }}
+                        </span>
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-1">{{ fb.name }}</h5>
+                    <div class="small text-secondary mb-3"><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ fb.address }}</div>
+
+                    <!-- Live Capacity Gauge -->
+                    <div class="bg-light p-3 rounded-3 mb-3 small">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Live Intake Capacity:</span>
+                            <strong class="text-dark">{{ fb.remaining_cap }} / {{ fb.max_cap }} meals open</strong>
+                        </div>
+                        <div class="progress mb-2" style="height: 6px;">
+                            <div class="progress-bar bg-{{ 'danger' if fb.capacity_pct > 80 else 'success' }}" role="progressbar" style="width: {{ fb.capacity_pct }}%;"></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
+                            <span>Hours: {{ fb.operating_hours }}</span>
+                            <span>{{ fb.open_needs_count }} active deficits</span>
+                        </div>
+                    </div>
+
+                    <p class="small text-secondary mb-4 flex-grow-1">
+                        {{ fb.description[:120] }}...
+                    </p>
+
+                    <div class="mt-auto">
+                        <a href="{{ url_for('donor.post_food') }}" class="btn btn-outline-success btn-sm w-100 fw-semibold">
+                            <i class="bi bi-box2-heart me-1"></i> Donate Food to This Center
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Center around Chennai / Campus Region
+    const map = L.map('needHeatmap').setView([13.0827, 80.2707], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Fetch Heatmap Points dynamically from API
+    fetch("{{ url_for('finder.get_heatmap_points') }}")
+        .then(res => res.json())
+        .then(data => {
+            if (data.points && data.points.length > 0) {
+                const heatArray = [];
+                
+                data.points.forEach(p => {
+                    heatArray.push([p.lat, p.lng, p.intensity]);
+
+                    // Add Interactive Marker for each high-need hotspot
+                    const circle = L.circleMarker([p.lat, p.lng], {
+                        color: p.urgency === 'critical_red' ? '#dc3545' : '#f59e0b',
+                        fillColor: p.urgency === 'critical_red' ? '#dc3545' : '#f59e0b',
+                        fillOpacity: 0.6,
+                        radius: 12
+                    }).addTo(map);
+
+                    circle.bindPopup(`
+                        <div class="p-1">
+                            <strong class="text-dark">${p.title}</strong><br>
+                            <span class="badge bg-warning text-dark mt-1">${p.meals_needed} Meals Required</span><br>
+                            <small class="text-secondary"><i class="bi bi-geo-alt"></i> ${p.location}</small>
+                        </div>
+                    `);
+                });
+
+                // Add Heatmap Layer
+                if (typeof L.heatLayer === 'function') {
+                    L.heatLayer(heatArray, {
+                        radius: 35,
+                        blur: 25,
+                        maxZoom: 15,
+                        gradient: {0.3: 'blue', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
+                    }).addTo(map);
+                }
+            }
+        })
+        .catch(err => console.error("Error loading heatmap data:", err));
+});
+</script>
+{% endblock %}

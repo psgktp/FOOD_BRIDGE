@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Register | Join FoodBridge Network{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="text-center mb-4">
+                    <span class="fs-1">🤝</span>
+                    <h3 class="fw-bold text-dark mt-2">Join the FoodBridge Ecosystem</h3>
+                    <p class="text-secondary small">Register as a Food Donor, Verified NGO, or Volunteer Courier.</p>
+                </div>
+
+                <form method="POST" action="{{ url_for('auth.register') }}">
+                    <!-- Step 1: Role Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark small text-uppercase">1. Select Your Role</label>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="radio" class="btn-check" name="role" id="roleDonor" value="donor" checked onchange="toggleRoleFields('donor')">
+                                <label class="btn btn-outline-success w-100 p-3 text-center rounded-3 h-100 d-flex flex-column align-items-center justify-content-center" for="roleDonor">
+                                    <i class="bi bi-shop fs-4 mb-1"></i>
+                                    <span class="fw-bold small">Food Donor</span>
+                                    <span class="text-muted" style="font-size: 0.65rem;">College / Hotel / Canteen</span>
+                                </label>
+                            </div>
+                            <div class="col-4">
+                                <input type="radio" class="btn-check" name="role" id="roleOrg" value="organization" onchange="toggleRoleFields('organization')">
+                                <label class="btn btn-outline-warning w-100 p-3 text-center rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-dark" for="roleOrg">
+                                    <i class="bi bi-building-heart fs-4 mb-1"></i>
+                                    <span class="fw-bold small">NGO / Food Bank</span>
+                                    <span class="text-muted" style="font-size: 0.65rem;">Shelter / Relief Agency</span>
+                                </label>
+                            </div>
+                            <div class="col-4">
+                                <input type="radio" class="btn-check" name="role" id="roleVol" value="volunteer" onchange="toggleRoleFields('volunteer')">
+                                <label class="btn btn-outline-info w-100 p-3 text-center rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-dark" for="roleVol">
+                                    <i class="bi bi-bicycle fs-4 mb-1"></i>
+                                    <span class="fw-bold small">Volunteer</span>
+                                    <span class="text-muted" style="font-size: 0.65rem;">Student / Courier</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Primary Account Details -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark small text-uppercase">2. Basic Account Credentials</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Full Contact Name / Incharge</label>
+                                <input type="text" class="form-control" name="full_name" required placeholder="e.g. Prof. Ramesh / David Raj">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Phone Number</label>
+                                <input type="text" class="form-control" name="phone" required placeholder="+91 98765 43210">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Official Email Address</label>
+                                <input type="email" class="form-control" name="email" required placeholder="contact@domain.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Password</label>
+                                <input type="password" class="form-control" name="password" required placeholder="••••••••">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Location & Geocoding -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-bold text-dark small text-uppercase mb-0">3. Primary Location & Exact GPS</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-xs btn-outline-danger fw-semibold" onclick="openLocationPickerModal('inputLatitude', 'inputLongitude', 'inputAddress')">
+                                    <i class="bi bi-map-fill me-1"></i> Pin on Map
+                                </button>
+                                <button type="button" class="btn btn-xs btn-outline-primary btn-gps-detect" data-lat-id="inputLatitude" data-lng-id="inputLongitude" data-addr-id="inputAddress">
+                                    <i class="bi bi-crosshair me-1"></i> High-Precision GPS
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="inputAddress" name="address_text" required placeholder="Campus Building / Street / Landmark Address">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" name="city" value="Chennai" placeholder="City">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" step="0.000001" class="form-control" id="inputLatitude" name="latitude" value="13.0827" placeholder="Latitude">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" step="0.000001" class="form-control" id="inputLongitude" name="longitude" value="80.2707" placeholder="Longitude">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Dynamic Role Specific Fields -->
+                    <div id="donorFieldsSection" class="mb-4">
+                        <label class="form-label fw-bold text-dark small text-uppercase">4. Donor Specific Metadata</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Donor Entity Type</label>
+                                <select class="form-select" name="donor_type">
+                                    <option value="college_canteen" selected>College Canteen / Mess</option>
+                                    <option value="event_organizer">Symposium / Fest Organizer</option>
+                                    <option value="restaurant">Restaurant / Cafe</option>
+                                    <option value="hotel">Hotel / Banquet Hall</option>
+                                    <option value="individual">Individual Donor</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Institution / College Name</label>
+                                <input type="text" class="form-control" name="institution_name" placeholder="e.g. Anna University College of Engineering">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small text-secondary">FSSAI License (Optional)</label>
+                                <input type="text" class="form-control" name="fssai_license" placeholder="FSSAI-123456789">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="orgFieldsSection" class="mb-4 d-none">
+                        <label class="form-label fw-bold text-dark small text-uppercase">4. NGO / Food Bank Telemetry</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Organization Name</label>
+                                <input type="text" class="form-control" name="org_name" placeholder="e.g. Mercy Community Shelter">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Organization Type</label>
+                                <select class="form-select" name="org_type">
+                                    <option value="food_bank">Food Bank / Pantry</option>
+                                    <option value="shelter" selected>Shelter Home</option>
+                                    <option value="community_kitchen">Community Kitchen</option>
+                                    <option value="ngo">Registered Charitable NGO</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Max Daily Meal Capacity</label>
+                                <input type="number" class="form-control" name="max_daily_capacity" value="250">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Govt / NGO Registration #</label>
+                                <input type="text" class="form-control" name="govt_reg_number" placeholder="TN-REG-2024-XXXX">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="volFieldsSection" class="mb-4 d-none">
+                        <label class="form-label fw-bold text-dark small text-uppercase">4. Volunteer Transport Details</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Primary Mode of Transport</label>
+                                <select class="form-select" name="transport_mode">
+                                    <option value="two_wheeler" selected>Motorcycle / Scooter (Capacity ~40 meals)</option>
+                                    <option value="bicycle">Bicycle (Capacity ~15 meals)</option>
+                                    <option value="car">Car (Capacity ~120 meals)</option>
+                                    <option value="van_truck">Van / Utility (Capacity ~300 meals)</option>
+                                    <option value="walking">Walking (Campus Area)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-3 fw-bold rounded-3 shadow-sm mb-3">
+                        Register Account & Activate <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+
+                    <div class="text-center text-secondary small">
+                        Already registered? <a href="{{ url_for('auth.login') }}" class="text-success fw-semibold text-decoration-none">Log In</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleRoleFields(role) {
+    document.getElementById('donorFieldsSection').classList.add('d-none');
+    document.getElementById('orgFieldsSection').classList.add('d-none');
+    document.getElementById('volFieldsSection').classList.add('d-none');
+
+    if (role === 'donor') {
+        document.getElementById('donorFieldsSection').classList.remove('d-none');
+    } else if (role === 'organization') {
+        document.getElementById('orgFieldsSection').classList.remove('d-none');
+    } else if (role === 'volunteer') {
+        document.getElementById('volFieldsSection').classList.remove('d-none');
+    }
+}
+</script>
+{% endblock %}
