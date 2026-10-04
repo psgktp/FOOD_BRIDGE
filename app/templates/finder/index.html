@@ -1,76 +1,78 @@
 {% extends "base.html" %}
 
-{% block title %}Food Bank Directory & Need Heatmap | FoodBridge{% endblock %}
+{% block title %}Find Centers | FoodBridge{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
         <div>
-            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Food Bank Directory & Live Need Heatmap</h2>
-            <p class="text-secondary small mb-0">Discover verified hunger relief agencies and visualize active deficit zones across the city.</p>
+            <h3 class="fw-bold text-dark mb-1">Food Bank & Shelter Directory</h3>
+            <p class="text-secondary small mb-0">Discover verified community shelters and hunger relief distribution points.</p>
         </div>
         <div class="d-flex gap-2 mt-2 mt-md-0">
-            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill d-flex align-items-center gap-1">
-                <i class="bi bi-fire"></i> Live Deficit Sensing Active
+            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" id="btnLocateMe">
+                <i class="bi bi-geo-alt-fill me-1"></i> Auto-Detect My Location
+            </button>
+            <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill d-flex align-items-center">
+                <i class="bi bi-broadcast me-1"></i> Live Map Active
             </span>
         </div>
     </div>
 
-    <!-- Interactive GIS Food Need Heatmap Card -->
-    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-broadcast text-warning me-2"></i>Live Food Need Density Heatmap</h5>
-            <div class="small text-secondary">
-                <span class="badge bg-success text-white me-1">🟢 Low Need</span>
-                <span class="badge bg-warning text-dark me-1">🟡 Moderate</span>
-                <span class="badge bg-danger text-white">🔴 High Need Cluster</span>
-            </div>
-        </div>
-
-        <div id="needHeatmap"></div>
-    </div>
-
-    <!-- Verified Food Banks & Shelters Directory -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-building-check text-success me-2"></i>Verified Food Banks & Pantries</h4>
-        <div class="small text-secondary">{{ food_banks|length }} Registered Relief Centers</div>
-    </div>
-
     <!-- Search Form -->
     <form method="GET" action="{{ url_for('finder.index') }}" class="mb-4">
-        <div class="input-group input-group-lg shadow-sm rounded-4 overflow-hidden border">
+        <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border">
             <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" class="form-control border-0" name="q" placeholder="Search by food bank name, area, or keywords..." value="{{ query_text }}">
+            <input type="text" class="form-control border-0" name="q" placeholder="Search by center name, location, or area..." value="{{ query_text }}">
             <button type="submit" class="btn btn-success px-4 fw-semibold">Search</button>
         </div>
     </form>
 
-    <div class="row g-4">
+    <!-- Interactive Map View -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-dark mb-0">Interactive Centers & Need Map</h6>
+            <div class="small text-secondary d-flex align-items-center gap-2">
+                <span class="badge bg-success text-white">Center Location</span>
+                <span class="badge bg-warning text-dark">Need Hotspot</span>
+                <span class="badge bg-primary text-white">Your Location</span>
+            </div>
+        </div>
+        <div id="needHeatmap" style="height: 440px; width: 100%; border-radius: 12px;"></div>
+    </div>
+
+    <!-- Verified Food Banks & Shelters Directory -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0">Registered Centers ({{ food_banks|length }})</h5>
+        <div class="small text-muted" id="userLocationStatus">Click any center on map or list to view details</div>
+    </div>
+
+    <div class="row g-4" id="centersList">
         {% for fb in food_banks %}
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 center-card-item" data-lat="{{ fb.latitude }}" data-lng="{{ fb.longitude }}" data-name="{{ fb.name }}">
                 <div class="card h-100 border-0 shadow-sm rounded-4 p-4 bg-white d-flex flex-column">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="badge bg-secondary text-uppercase" style="font-size: 0.7rem;">{{ fb.type }}</span>
-                        <span class="badge bg-{{ 'success' if fb.is_accepting else 'secondary' }}">
-                            {{ 'Accepting Surplus' if fb.is_accepting else 'Intake Paused' }}
+                        <span class="badge bg-light text-secondary border text-uppercase" style="font-size: 0.7rem;">{{ fb.type }}</span>
+                        <span class="badge bg-{{ 'success-subtle text-success' if fb.is_accepting else 'secondary-subtle text-secondary' }}">
+                            {{ 'Accepting Food' if fb.is_accepting else 'Temporarily Full' }}
                         </span>
                     </div>
 
                     <h5 class="fw-bold text-dark mb-1">{{ fb.name }}</h5>
-                    <div class="small text-secondary mb-3"><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ fb.address }}</div>
+                    <div class="small text-secondary mb-3"><i class="bi bi-geo-alt me-1 text-danger"></i> {{ fb.address }}</div>
 
-                    <!-- Live Capacity Gauge -->
+                    <!-- Intake Capacity -->
                     <div class="bg-light p-3 rounded-3 mb-3 small">
                         <div class="d-flex justify-content-between mb-1">
-                            <span>Live Intake Capacity:</span>
-                            <strong class="text-dark">{{ fb.remaining_cap }} / {{ fb.max_cap }} meals open</strong>
+                            <span>Available Capacity:</span>
+                            <strong class="text-dark">{{ fb.remaining_cap }} / {{ fb.max_cap }} meals</strong>
                         </div>
                         <div class="progress mb-2" style="height: 6px;">
                             <div class="progress-bar bg-{{ 'danger' if fb.capacity_pct > 80 else 'success' }}" role="progressbar" style="width: {{ fb.capacity_pct }}%;"></div>
                         </div>
                         <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
                             <span>Hours: {{ fb.operating_hours }}</span>
-                            <span>{{ fb.open_needs_count }} active deficits</span>
+                            <span>{{ fb.open_needs_count }} active needs</span>
                         </div>
                     </div>
 
@@ -78,65 +80,220 @@
                         {{ fb.description[:120] }}...
                     </p>
 
-                    <div class="mt-auto">
-                        <a href="{{ url_for('donor.post_food') }}" class="btn btn-outline-success btn-sm w-100 fw-semibold">
-                            <i class="bi bi-box2-heart me-1"></i> Donate Food to This Center
+                    <div class="mt-auto d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="focusOnMap({{ fb.latitude }}, {{ fb.longitude }}, '{{ fb.name|escape }}')">
+                            <i class="bi bi-crosshair me-1"></i> View on Map
+                        </button>
+                        {% if current_user.is_authenticated and current_user.is_donor %}
+                            <a href="{{ url_for('donor.post_food') }}" class="btn btn-success btn-sm flex-fill">
+                                Donate
+                            </a>
+                        {% endif %}
+                        <a href="https://maps.google.com/?q={{ fb.latitude }},{{ fb.longitude }}" target="_blank" class="btn btn-light btn-sm border text-secondary" title="Google Maps Directions">
+                            <i class="bi bi-box-arrow-up-right"></i>
                         </a>
                     </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-light border text-center p-5 rounded-4">
+                    <p class="text-muted mb-0">No food centers matching your query.</p>
                 </div>
             </div>
         {% endfor %}
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
+let map = null;
+let markersLayer = null;
+let userMarker = null;
+
+const foodCentersData = [
+    {% for fb in food_banks %}
+    {
+        id: {{ fb.id }},
+        name: "{{ fb.name|escape }}",
+        type: "{{ fb.type|escape }}",
+        address: "{{ fb.address|escape }}",
+        lat: {{ fb.latitude }},
+        lng: {{ fb.longitude }},
+        remaining_cap: {{ fb.remaining_cap }},
+        max_cap: {{ fb.max_cap }},
+        is_accepting: {{ 'true' if fb.is_accepting else 'false' }},
+        open_needs: {{ fb.open_needs_count }}
+    },
+    {% endfor %}
+];
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Center around Chennai / Campus Region
-    const map = L.map('needHeatmap').setView([13.0827, 80.2707], 13);
+    // 1. Initialize Map centered on primary region
+    const defaultCenter = [13.0827, 80.2707];
+    map = L.map('needHeatmap').setView(defaultCenter, 12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18
     }).addTo(map);
 
-    // Fetch Heatmap Points dynamically from API
+    markersLayer = L.layerGroup().addTo(map);
+
+    // 2. Automatically Plot All Registered Food Centers as markers
+    const bounds = [];
+    foodCentersData.forEach(center => {
+        const marker = L.circleMarker([center.lat, center.lng], {
+            color: center.is_accepting ? '#10b981' : '#64748b',
+            fillColor: center.is_accepting ? '#10b981' : '#94a3b8',
+            fillOpacity: 0.85,
+            radius: 10,
+            weight: 2
+        }).addTo(markersLayer);
+
+        marker.bindPopup(`
+            <div class="p-1" style="min-width: 180px;">
+                <div class="fw-bold text-dark mb-1">${center.name}</div>
+                <div class="small text-secondary mb-1"><i class="bi bi-geo-alt"></i> ${center.address}</div>
+                <div class="small mb-1">
+                    <span class="badge ${center.is_accepting ? 'bg-success' : 'bg-secondary'}">
+                        ${center.is_accepting ? 'Accepting Food' : 'Intake Paused'}
+                    </span>
+                </div>
+                <div class="small text-muted">Intake Capacity: <strong>${center.remaining_cap} / ${center.max_cap}</strong> meals</div>
+                <div class="mt-2">
+                    <a href="https://maps.google.com/?q=${center.lat},${center.lng}" target="_blank" class="btn btn-xs btn-outline-dark w-100 py-1" style="font-size:0.75rem;">
+                        Directions &rarr;
+                    </a>
+                </div>
+            </div>
+        `);
+
+        bounds.push([center.lat, center.lng]);
+    });
+
+    // 3. Fetch & Overlay Heatmap Hotspots of Community Food Needs
     fetch("{{ url_for('finder.get_heatmap_points') }}")
         .then(res => res.json())
         .then(data => {
             if (data.points && data.points.length > 0) {
                 const heatArray = [];
-                
                 data.points.forEach(p => {
                     heatArray.push([p.lat, p.lng, p.intensity]);
+                    bounds.push([p.lat, p.lng]);
 
-                    // Add Interactive Marker for each high-need hotspot
-                    const circle = L.circleMarker([p.lat, p.lng], {
-                        color: p.urgency === 'critical_red' ? '#dc3545' : '#f59e0b',
-                        fillColor: p.urgency === 'critical_red' ? '#dc3545' : '#f59e0b',
-                        fillOpacity: 0.6,
-                        radius: 12
-                    }).addTo(map);
+                    // Add pulsating ring marker for urgent hunger spots
+                    const needMarker = L.circleMarker([p.lat, p.lng], {
+                        color: p.urgency === 'critical_red' ? '#ef4444' : '#f59e0b',
+                        fillColor: p.urgency === 'critical_red' ? '#ef4444' : '#f59e0b',
+                        fillOpacity: 0.5,
+                        radius: 14,
+                        weight: 2
+                    }).addTo(markersLayer);
 
-                    circle.bindPopup(`
+                    needMarker.bindPopup(`
                         <div class="p-1">
-                            <strong class="text-dark">${p.title}</strong><br>
-                            <span class="badge bg-warning text-dark mt-1">${p.meals_needed} Meals Required</span><br>
+                            <span class="badge bg-danger mb-1">Shelter Deficit</span>
+                            <div class="fw-bold text-dark">${p.title}</div>
+                            <div class="small text-danger fw-semibold">${p.meals_needed} Meals Urgently Needed</div>
                             <small class="text-secondary"><i class="bi bi-geo-alt"></i> ${p.location}</small>
                         </div>
                     `);
                 });
 
-                // Add Heatmap Layer
-                if (typeof L.heatLayer === 'function') {
+                if (typeof L.heatLayer === 'function' && heatArray.length > 0) {
                     L.heatLayer(heatArray, {
                         radius: 35,
                         blur: 25,
                         maxZoom: 15,
-                        gradient: {0.3: 'blue', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
+                        gradient: {0.3: '#3b82f6', 0.6: '#10b981', 0.8: '#f59e0b', 1.0: '#ef4444'}
                     }).addTo(map);
                 }
             }
+
+            // Fit map view nicely around all centers and need hotspots
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+            }
         })
-        .catch(err => console.error("Error loading heatmap data:", err));
+        .catch(err => console.error("Error loading heatmap points:", err));
+
+    // 4. Auto-Detect User's Current GPS Location to sort/pan to nearest center
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const uLat = pos.coords.latitude;
+                const uLng = pos.coords.longitude;
+                setUserLocation(uLat, uLng);
+            },
+            (err) => {
+                console.log("Geolocation permission not granted or timeout:", err.message);
+            },
+            { timeout: 7000, maximumAge: 60000 }
+        );
+    }
+
+    // Manual 'Auto-Detect My Location' Button
+    const btnLocate = document.getElementById('btnLocateMe');
+    if (btnLocate) {
+        btnLocate.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser.');
+                return;
+            }
+            btnLocate.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Locating...';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const uLat = pos.coords.latitude;
+                    const uLng = pos.coords.longitude;
+                    setUserLocation(uLat, uLng, true);
+                    btnLocate.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i> Located';
+                },
+                (err) => {
+                    alert('Unable to retrieve location: ' + err.message);
+                    btnLocate.innerHTML = '<i class="bi bi-geo-alt-fill me-1"></i> Auto-Detect My Location';
+                }
+            );
+        });
+    }
 });
+
+function setUserLocation(lat, lng, panTo = false) {
+    if (userMarker) {
+        map.removeLayer(userMarker);
+    }
+
+    userMarker = L.circleMarker([lat, lng], {
+        color: '#2563eb',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.9,
+        radius: 9,
+        weight: 3
+    }).addTo(map);
+
+    userMarker.bindPopup(`
+        <div class="p-1 text-center">
+            <strong class="text-primary"><i class="bi bi-person-fill"></i> You Are Here</strong>
+        </div>
+    `).openPopup();
+
+    if (panTo) {
+        map.setView([lat, lng], 13);
+    }
+
+    const statusEl = document.getElementById('userLocationStatus');
+    if (statusEl) {
+        statusEl.innerHTML = `<span class="text-success"><i class="bi bi-geo-fill"></i> Location detected</span> &bull; Showing nearest relief centers`;
+    }
+}
+
+function focusOnMap(lat, lng, name) {
+    if (map) {
+        map.setView([lat, lng], 15);
+        // Scroll map into view smoothly
+        document.getElementById('needHeatmap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
 </script>
 {% endblock %}

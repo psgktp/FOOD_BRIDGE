@@ -7,125 +7,106 @@
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <div>
-            <h2 class="fw-bold text-dark mb-1">Donor Operations Center</h2>
+            <h3 class="fw-bold text-dark mb-1">Donor Dashboard</h3>
             <p class="text-secondary small mb-0">
-                Logged in as <strong class="text-dark">{{ current_user.full_name }}</strong> ({{ current_user.donor_profile.institution_name if current_user.donor_profile else 'Individual Donor' }})
+                {{ current_user.full_name }} &bull; {{ current_user.donor_profile.institution_name if current_user.donor_profile else 'Individual Donor' }}
             </p>
         </div>
         <div class="d-flex gap-2 mt-3 mt-md-0">
-            <a href="{{ url_for('donor.post_food', fast_track=1) }}" class="btn btn-dark d-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-lightning-charge-fill text-warning"></i> Campus Event Fast-Track
+            <a href="{{ url_for('donor.post_food', fast_track=1) }}" class="btn btn-outline-dark d-flex align-items-center gap-1">
+                <i class="bi bi-lightning-charge text-warning"></i> Quick Event Post
             </a>
-            <a href="{{ url_for('donor.post_food') }}" class="btn btn-success d-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-plus-circle"></i> Post Standard Surplus
+            <a href="{{ url_for('donor.post_food') }}" class="btn btn-success d-flex align-items-center gap-1">
+                <i class="bi bi-plus-circle"></i> Donate Surplus Food
             </a>
         </div>
     </div>
 
     <!-- Active Donation Listings -->
     <div class="mb-5">
-        <h4 class="fw-bold text-dark mb-3"><i class="bi bi-hourglass-split text-warning me-2"></i>Active Surplus Dispatches</h4>
+        <h5 class="fw-bold text-dark mb-3">Active Food Listings</h5>
         {% if active_donations %}
             <div class="row g-3">
                 {% for don in active_donations %}
                     {% set u_info = get_urgency_badge_info(don.urgency_tier) %}
                     <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden {{ u_info.border_class }} border-top border-4">
-                            <div class="card-body p-4 d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <span class="{{ u_info.badge_class }}">{{ u_info.label }}</span>
-                                    <span class="badge bg-secondary text-uppercase">{{ don.status.replace('_', ' ') }}</span>
+                        <div class="card h-100 border-0 shadow-sm rounded-4 p-3 bg-white d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="{{ u_info.badge_class }}">{{ u_info.label }}</span>
+                                <span class="badge bg-light text-secondary border text-uppercase">{{ don.status.replace('_', ' ') }}</span>
+                            </div>
+                            
+                            <h6 class="fw-bold text-dark mb-1">{{ don.title }}</h6>
+                            {% if don.is_campus_event %}
+                                <div class="badge bg-dark-subtle text-dark small mb-2 text-start w-auto"><i class="bi bi-mortarboard me-1"></i> {{ don.event_name }}</div>
+                            {% endif %}
+                            <div class="text-secondary small mb-3"><i class="bi bi-geo-alt me-1"></i> {{ don.pickup_address_text }}</div>
+                            
+                            <div class="bg-light p-3 rounded-3 mb-3 small">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Quantity:</span>
+                                    <strong class="text-dark">{{ don.quantity_meals }} meals ({{ don.weight_approx_kg }} kg)</strong>
                                 </div>
-                                
-                                <h5 class="fw-bold text-dark mb-1">{{ don.title }}</h5>
-                                {% if don.is_campus_event %}
-                                    <div class="badge bg-dark text-warning small mb-2"><i class="bi bi-mortarboard-fill me-1"></i> {{ don.event_name }}</div>
-                                {% endif %}
-                                <div class="text-secondary small mb-3"><i class="bi bi-geo-alt"></i> {{ don.pickup_address_text }}</div>
-                                
-                                <div class="bg-light p-3 rounded-3 mb-3 small">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span>Total Quantity:</span>
-                                        <strong class="text-dark">{{ don.quantity_meals }} meals ({{ don.weight_approx_kg }} kg)</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span>Allocated / Claimed:</span>
-                                        <strong class="text-success">{{ don.allocated_meals }} meals</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Safe Buffer Left:</span>
-                                        <strong class="text-danger">{{ "%.1f"|format(don.hours_remaining) }} hours</strong>
-                                    </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Claimed:</span>
+                                    <strong class="text-success">{{ don.allocated_meals }} meals</strong>
                                 </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Time Left:</span>
+                                    <strong class="text-muted">{{ "%.1f"|format(don.hours_remaining) }} hrs</strong>
+                                </div>
+                            </div>
 
-                                <div class="mt-auto d-flex gap-2">
-                                    <a href="{{ url_for('donor.donation_detail', donation_id=don.id) }}" class="btn btn-outline-dark btn-sm flex-fill fw-semibold">
-                                        <i class="bi bi-qr-code me-1"></i> QR & Pickup OTP
-                                    </a>
-                                </div>
+                            <div class="mt-auto">
+                                <a href="{{ url_for('donor.donation_detail', donation_id=don.id) }}" class="btn btn-outline-dark btn-sm w-100 fw-medium">
+                                    <i class="bi bi-qr-code me-1"></i> View Pickup Code & Matches
+                                </a>
                             </div>
                         </div>
                     </div>
                 {% endfor %}
             </div>
         {% else %}
-            <div class="alert alert-light border rounded-4 p-4 text-center">
-                <p class="text-secondary mb-3">You currently have no active surplus food listings.</p>
-                <a href="{{ url_for('donor.post_food', fast_track=1) }}" class="btn btn-dark btn-sm">
-                    <i class="bi bi-lightning-charge-fill text-warning"></i> Post Leftover Food Now
-                </a>
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center text-muted">
+                <p class="mb-3">You currently have no active surplus food listings.</p>
+                <div>
+                    <a href="{{ url_for('donor.post_food') }}" class="btn btn-success btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Post Food Surplus
+                    </a>
+                </div>
             </div>
         {% endif %}
     </div>
 
-    <!-- Past Donation History & Impact Certificate -->
-    <div>
-        <h4 class="fw-bold text-dark mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Completed Rescues & History</h4>
-        {% if past_donations %}
-            <div class="table-responsive bg-white rounded-4 shadow-sm p-3">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light small text-secondary">
-                        <tr>
-                            <th>ID</th>
-                            <th>Surplus Item / Event</th>
-                            <th>Category</th>
-                            <th>Meals Donated</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Green Impact</th>
-                        </tr>
-                    </thead>
-                    <tbody class="small">
-                        {% for don in past_donations %}
+    <!-- Completed History -->
+    {% if completed_donations %}
+        <div>
+            <h5 class="fw-bold text-dark mb-3">Completed Rescues</h5>
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small">
                             <tr>
-                                <td class="fw-bold">#{{ don.id }}</td>
-                                <td>
-                                    <div class="fw-semibold text-dark">{{ don.title }}</div>
-                                    {% if don.is_campus_event %}
-                                        <span class="badge bg-light text-dark border">{{ don.event_name }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ don.food_category.replace('_', ' ').title() }}</td>
-                                <td class="fw-bold text-success">{{ don.quantity_meals }} meals</td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if don.status in ['delivered', 'completed'] else 'secondary' }}">
-                                        {{ don.status.title() }}
-                                    </span>
-                                </td>
-                                <td class="text-secondary">{{ don.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                                <td>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                        <i class="bi bi-tree-fill"></i> {{ "%.1f"|format(don.weight_approx_kg * 2.5) }} kg $\text{CO}_2\text{e}$
-                                    </span>
-                                </td>
+                                <th>Item</th>
+                                <th>Meals Rescued</th>
+                                <th>Pickup Date</th>
+                                <th>Status</th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="small">
+                            {% for don in completed_donations %}
+                                <tr>
+                                    <td class="fw-medium text-dark">{{ don.title }}</td>
+                                    <td><span class="badge bg-success-subtle text-success">{{ don.quantity_meals }} meals</span></td>
+                                    <td class="text-secondary">{{ don.created_at.strftime('%b %d, %Y') }}</td>
+                                    <td><span class="badge bg-light text-secondary border">{{ don.status.replace('_', ' ').capitalize() }}</span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        {% else %}
-            <div class="alert alert-light border rounded-4 p-3 text-center text-muted small">No past donation history yet.</div>
-        {% endif %}
-    </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

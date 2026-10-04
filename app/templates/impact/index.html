@@ -1,71 +1,70 @@
 {% extends "base.html" %}
 
-{% block title %}Impact & Carbon Abatement Telemetry | FoodBridge{% endblock %}
+{% block title %}Impact Overview | FoodBridge{% endblock %}
 
 {% block content %}
 <div class="container py-3">
     <!-- Header -->
     <div class="text-center max-w-2xl mx-auto mb-5">
-        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill fw-semibold mb-2">
-            <i class="bi bi-graph-up-arrow me-1"></i> Live ESG Telemetry
+        <span class="badge bg-success-subtle text-success px-3 py-1 rounded-pill fw-semibold mb-2">
+            Environmental & Social Impact
         </span>
-        <h2 class="display-6 fw-bold text-dark mb-2">Real-Time Environmental & Social Impact</h2>
-        <p class="text-secondary">Tracking every meal diverted from landfills, converted into greenhouse gas abatement metrics using EPA standard factors.</p>
+        <h2 class="fw-bold text-dark mb-2">Our Community Impact</h2>
+        <p class="text-secondary">Every meal saved keeps food out of landfills and delivers nutrition to community shelters.</p>
     </div>
 
     <!-- Big Impact Stats -->
     <div class="row g-4 mb-5">
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-4 p-4 text-center bg-white">
-                <div class="fs-1 text-success mb-2"><i class="bi bi-box2-heart-fill"></i></div>
+                <div class="fs-1 text-success mb-2"><i class="bi bi-box2-heart"></i></div>
                 <div class="display-6 fw-bold text-dark">{{ "{:,}".format(stats.total_meals_rescued) }}</div>
-                <div class="text-secondary small fw-semibold">Wholesome Meals Rescued</div>
+                <div class="text-secondary small fw-semibold">Meals Rescued</div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-4 p-4 text-center bg-white">
                 <div class="fs-1 text-primary mb-2"><i class="bi bi-recycle"></i></div>
-                <div class="display-6 fw-bold text-dark">{{ "{:,.1f}".format(stats.total_biomass_kg) }} <span class="fs-6">kg</span></div>
-                <div class="text-secondary small fw-semibold">Landfill Biomass Diverted</div>
+                <div class="display-6 fw-bold text-dark">{{ "{:,.0f}".format(stats.total_biomass_kg) }} <span class="fs-6">kg</span></div>
+                <div class="text-secondary small fw-semibold">Food Waste Diverted</div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-4 p-4 text-center bg-white">
-                <div class="fs-1 text-info mb-2"><i class="bi bi-cloud-check-fill"></i></div>
-                <div class="display-6 fw-bold text-dark">{{ "{:,.1f}".format(stats.total_co2e_kg_saved) }} <span class="fs-6">kg</span></div>
-                <div class="text-secondary small fw-semibold">$\text{CO}_2\text{e}$ Emissions Abated</div>
+                <div class="fs-1 text-info mb-2"><i class="bi bi-cloud-check"></i></div>
+                <div class="display-6 fw-bold text-dark">{{ "{:,.0f}".format(stats.total_co2e_kg_saved) }} <span class="fs-6">kg</span></div>
+                <div class="text-secondary small fw-semibold">CO₂ Emissions Saved</div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-4 p-4 text-center bg-white">
                 <div class="fs-1 text-warning mb-2"><i class="bi bi-currency-rupee"></i></div>
                 <div class="display-6 fw-bold text-dark">&#8377;{{ "{:,.0f}".format(stats.total_economic_value_inr) }}</div>
-                <div class="text-secondary small fw-semibold">Economic Value Preserved</div>
+                <div class="text-secondary small fw-semibold">Economic Value Saved</div>
             </div>
         </div>
     </div>
 
-    <!-- Campus Leaderboard & Methodology -->
+    <!-- Leaderboard & Standards -->
     <div class="row g-4">
-        <!-- Campus Leaderboard -->
         <div class="col-lg-7">
             <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Campus & Donor Green Leaderboard</h5>
-                    <span class="badge bg-warning text-dark">Top Contributors</span>
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-trophy text-warning me-2"></i>Donor Leaderboard</h5>
+                    <span class="badge bg-light text-secondary border">Top Contributors</span>
                 </div>
-                <p class="small text-secondary mb-4">Recognizing university departments, symposium committees, and hotel partners leading the zero-waste movement.</p>
+                <p class="small text-secondary mb-4">Recognizing campuses, messes, and caterers leading the zero-waste initiative.</p>
 
                 <div class="d-flex flex-column gap-3">
                     {% for item in stats.campus_leaderboard %}
-                        <div class="p-3 rounded-4 bg-light d-flex justify-content-between align-items-center border">
+                        <div class="p-3 rounded-3 bg-light d-flex justify-content-between align-items-center border">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="bg-dark text-warning rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px;">
+                                <div class="bg-dark text-warning rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px;">
                                     #{{ loop.index }}
                                 </div>
                                 <div>
                                     <h6 class="fw-bold text-dark mb-0">{{ item.institution }}</h6>
-                                    <span class="small text-secondary"><i class="bi bi-tree-fill text-success"></i> {{ item.co2e }} kg $\text{CO}_2\text{e}$ Saved</span>
+                                    <span class="small text-muted">{{ item.co2e }} kg CO₂ Saved</span>
                                 </div>
                             </div>
                             <div class="text-end">
@@ -78,27 +77,25 @@
             </div>
         </div>
 
-        <!-- EPA Calculation Methodology -->
         <div class="col-lg-5">
-            <div class="card border-0 shadow-sm rounded-4 p-4 bg-dark text-white h-100">
-                <span class="badge bg-success text-white fw-bold small text-uppercase mb-2">Scientific Model</span>
-                <h5 class="fw-bold text-white mb-2">Impact Calculation Standards</h5>
-                <p class="small text-light text-opacity-75 mb-3">
-                    Food waste decomposing in municipal landfills releases potent methane ($\text{CH}_4$), which possesses 28x the global warming potential of carbon dioxide.
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border h-100">
+                <h5 class="fw-bold text-dark mb-2">How We Measure</h5>
+                <p class="small text-secondary mb-3">
+                    Food diverted from municipal landfills prevents methane generation and conserves valuable agricultural resources.
                 </p>
 
-                <div class="bg-secondary bg-opacity-25 p-3 rounded-3 mb-3 small text-light text-opacity-90">
-                    <div class="fw-bold text-warning mb-1">Standard Conversion Factors:</div>
+                <div class="bg-light p-3 rounded-3 mb-3 small text-secondary">
+                    <div class="fw-semibold text-dark mb-2">Metrics Standards:</div>
                     <ul class="mb-0 ps-3">
-                        <li><strong>1 Meal Box</strong> $\approx$ 0.40 kg edible biomass</li>
-                        <li><strong>$\text{CO}_2\text{e}$ Factor</strong> = $2.5 \times \text{kg food waste}$ (EPA WARM Standard)</li>
-                        <li><strong>Economic Index</strong> $\approx$ &#8377;50 per wholesome meal saved</li>
+                        <li class="mb-1"><strong>1 Meal:</strong> ~0.40 kg edible food portion</li>
+                        <li class="mb-1"><strong>Carbon Abatement:</strong> 2.5 kg CO₂ equivalent saved per kg of food diverted</li>
+                        <li><strong>Meal Value:</strong> Estimated at ₹50 per meal delivered</li>
                     </ul>
                 </div>
 
                 <div class="mt-auto">
-                    <a href="{{ url_for('donor.post_food', fast_track=1) }}" class="btn btn-success w-100 fw-bold py-2">
-                        Earn Impact for Your Campus <i class="bi bi-arrow-right ms-1"></i>
+                    <a href="{{ url_for('donor.post_food') }}" class="btn btn-success w-100 fw-semibold py-2">
+                        Donate Surplus Food &rarr;
                     </a>
                 </div>
             </div>
