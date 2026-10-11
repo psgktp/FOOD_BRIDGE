@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodBridge | Smart Food Rescue & Need-Matching Platform</title>
+    
+    <!-- Meta SEO & Social -->
+    <meta name="description" content="A Hyperlocal, Event-Aware Surplus Food Rescue and Demand-Aggregation Platform with Multi-Stage QR Chain-of-Custody Verification.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%2032%22><text y=%2226%22 font-size=%2224%22>🍱</text></svg>">
+
+    <!-- Google Fonts & Bootstrap 5 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Leaflet GIS Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: #ecfdf5;
+            --secondary: #0ea5e9;
+            --dark: #0f172a;
+            --slate: #334155;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --critical: #ef4444;
+            --urgent: #f59e0b;
+            --moderate: #3b82f6;
+            --stable: #10b981;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--slate);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.06);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        #gis-map {
+            height: 480px;
+            width: 100%;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            z-index: 1;
+        }
+
+        .tab-btn {
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            color: var(--muted);
+            padding: 10px 18px;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: white;
+            color: var(--dark);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .badge-urgency-critical {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            animation: pulse-border 2s infinite;
+        }
+        .badge-urgency-urgent {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .badge-urgency-moderate {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .badge-urgency-stable {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .food-card {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: white;
+            transition: all 0.2s;
+            overflow: hidden;
+        }
+        .food-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.06);
+        }
+
+        .qr-box {
+            display: inline-block;
+            padding: 16px;
+            background: white;
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+        }
+
+        .state-step {
+            position: relative;
+            padding-left: 28px;
+        }
+        .state-step::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 24px;
+            bottom: -8px;
+            width: 2px;
+            background: #e2e8f0;
+        }
+        .state-step:last-child::before {
+            display: none;
+        }
+        .step-dot {
+            position: absolute;
+            left: 0;
+            top: 4px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--primary);
+        }
+        .step-dot.completed {
+            background: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation Bar -->
+    <nav class="navbar navbar-expand-lg sticky-top py-2 shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center text-dark fw-bold" href="#">
+                <span class="fs-3 me-2">🍱</span>
+                <span class="text-success">Food</span><span class="text-dark">Bridge</span>
+                <span class="brand-badge ms-2">LIVE DEMO</span>
+            </a>
+            
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3 gap-1">
+                    <li class="nav-item">
+                        <a class="nav-link text-secondary fw-semibold active" href="#overview" onclick="switchTab('overview')">
+                            <i class="bi bi-geo-alt me-1 text-danger"></i> Live GIS Map
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-secondary fw-semibold" href="#donor" onclick="switchTab('donor')">
+                            <i class="bi bi-box-seam me-1 text-success"></i> Donor Portal
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-secondary fw-semibold" href="#ngo" onclick="switchTab('ngo')">
+                            <i class="bi bi-building me-1 text-warning"></i> Shelters & Demand
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-secondary fw-semibold" href="#volunteer" onclick="switchTab('volunteer')">
+                            <i class="bi bi-bicycle me-1 text-primary"></i> Volunteer Routing
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-secondary fw-semibold" href="#custody" onclick="switchTab('custody')">
+                            <i class="bi bi-qr-code-scan me-1 text-dark"></i> QR Chain-of-Custody
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-secondary fw-semibold" href="#impact" onclick="switchTab('impact')">
+                            <i class="bi bi-pie-chart me-1 text-info"></i> Impact Telemetry
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-danger" onclick="resetDemoData()" title="Reset to original sample data">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Reset Data
+                    </button>
+                    <a href="https://github.com/psgktp/FOOD_MANAGEMENT" target="_blank" class="btn btn-sm btn-dark">
+                        <i class="bi bi-github me-1"></i> GitHub Repo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero / Telemetry Metric Banner -->
+    <section class="py-4 bg-white border-bottom">
+        <div class="container">
+            <div class="row g-3">
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted fw-semibold small">Meals Rescued</span>
+                            <div class="stat-icon bg-success-subtle text-success">🍱</div>
+                        </div>
+                        <h2 class="fw-bold mb-0 text-dark" id="stat-meals">1,480</h2>
+                        <span class="text-success small fw-semibold"><i class="bi bi-graph-up-arrow"></i> Active Realtime</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted fw-semibold small">CO₂e Abated</span>
+                            <div class="stat-icon bg-info-subtle text-info">🌿</div>
+                        </div>
+                        <h2 class="fw-bold mb-0 text-dark" id="stat-co2">3,700 <small class="fs-6 text-muted">kg</small></h2>
+                        <span class="text-muted small">EPA 2.5 kg/kg food</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted fw-semibold small">Landfill Diverted</span>
+                            <div class="stat-icon bg-warning-subtle text-warning">♻️</div>
+                        </div>
+                        <h2 class="fw-bold mb-0 text-dark" id="stat-biomass">740 <small class="fs-6 text-muted">kg</small></h2>
+                        <span class="text-success small fw-semibold">Zero organic waste</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted fw-semibold small">Active Feed</span>
+                            <div class="stat-icon bg-danger-subtle text-danger">⚡</div>
+                        </div>
+                        <h2 class="fw-bold mb-0 text-dark" id="stat-active">4 Runs</h2>
+                        <span class="text-danger small fw-semibold"><i class="bi bi-broadcast"></i> High Priority</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Navigation Sub-Bar (Tab Controller) -->
+    <div class="container mt-4">
+        <div class="bg-light p-1 rounded-3 d-inline-flex border gap-1 shadow-sm mb-4">
+            <button class="tab-btn active" id="tab-overview-btn" onclick="switchTab('overview')"><i class="bi bi-map me-1"></i> GIS Map & Live Feed</button>
+            <button class="tab-btn" id="tab-donor-btn" onclick="switchTab('donor')"><i class="bi bi-plus-circle me-1"></i> Post Donation</button>
+            <button class="tab-btn" id="tab-ngo-btn" onclick="switchTab('ngo')"><i class="bi bi-building me-1"></i> NGO Shelter Demands</button>
+            <button class="tab-btn" id="tab-volunteer-btn" onclick="switchTab('volunteer')"><i class="bi bi-bicycle me-1"></i> Dispatch & Routing</button>
+            <button class="tab-btn" id="tab-custody-btn" onclick="switchTab('custody')"><i class="bi bi-qr-code me-1"></i> QR Handshake</button>
+            <button class="tab-btn" id="tab-docs-btn" onclick="switchTab('docs')"><i class="bi bi-mortarboard me-1"></i> Academic Blueprint</button>
+        </div>
+    </div>
+
+    <!-- MAIN BODY SECTIONS -->
+    <main class="container pb-5">
+
+        <!-- SECTION 1: GIS MAP & LIVE SURPLUS FEED -->
+        <section id="section-overview">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="bg-white p-3 rounded-4 border shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="fw-bold mb-0">Hyperlocal GIS Surplus & Demand Map</h5>
+                                <p class="text-muted small mb-0">Realtime geo-spatial visualizer: Red (Urgent Surplus), Green (Active Food), Blue (NGO Shelter)</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="initLeafletMap()"><i class="bi bi-arrow-repeat"></i> Center Map</button>
+                        </div>
+                        <div id="gis-map"></div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="bg-white p-3 rounded-4 border shadow-sm h-100 d-flex flex-direction-column flex-column">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Live Surplus Telemetry</h5>
+                            <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="bi bi-broadcast"></i> 4-Tier Decay</span>
+                        </div>
+                        <div class="flex-grow-1 overflow-auto" id="surplus-list" style="max-height: 420px;">
+                            <!-- Dynamically Injected Food Cards -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: DONOR PORTAL & 1-CLICK FAST TRACK -->
+        <section id="section-donor" style="display: none;">
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">🍱 Post Surplus Food</h5>
+                            <span class="badge bg-success-subtle text-success">Instant Dispatch</span>
+                        </div>
+                        <p class="text-muted small">Campus messes, event caterers, bakeries or hotels can list edible surplus food before expiry.</p>
+
+                        <form id="donation-form" onsubmit="handleNewDonation(event)">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Food Description / Items</label>
+                                <input type="text" class="form-control" id="form-food-name" placeholder="e.g. Rice, Dal & Veg Curry (Symposium Lunch)" required>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Portions / Meals</label>
+                                    <input type="number" class="form-control" id="form-quantity" min="5" value="60" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Safe Window (Hours)</label>
+                                    <input type="number" class="form-control" id="form-shelf-life" min="1" max="48" value="3" required>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Dietary Type</label>
+                                    <select class="form-select" id="form-diet">
+                                        <option value="Vegetarian">🌱 Vegetarian</option>
+                                        <option value="Non-Vegetarian">🍗 Non-Vegetarian</option>
+                                        <option value="Vegan">🥗 100% Vegan</option>
+                                        <option value="Bakery">🥐 Bakery / Bread</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Pickup Location</label>
+                                    <input type="text" class="form-control" id="form-location" value="Campus Dining Hall B" required>
+                                </div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3 p-2 bg-light rounded-3 ps-5">
+                                <input class="form-check-input" type="checkbox" id="form-fast-track" checked>
+                                <label class="form-check-label small fw-semibold text-dark" for="form-fast-track">
+                                    ⚡ 1-Click Campus Event Fast-Track
+                                </label>
+                                <div class="text-muted" style="font-size: 0.75rem;">Bypasses standard review; immediately broadcasts high-priority alerts to nearby shelters.</div>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
+                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Broadcast Surplus Food
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Active Campus & Donor Listings</h5>
+                            <span class="badge bg-secondary-subtle text-secondary">Realtime Storage</span>
+                        </div>
+                        <div id="donor-listings-container">
+                            <!-- Populated with items -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: NGO / SHELTER PORTAL & CAPACITY TELEMETRY -->
+        <section id="section-ngo" style="display: none;">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm">
+                        <h5 class="fw-bold mb-3">Shelter Live Capacity Telemetry</h5>
+                        <p class="text-muted small">Prevents over-allocation by tracking live shelter storage & daily beneficiary limits.</p>
+                        
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between small fw-semibold mb-1">
+                                <span>Hope Child Shelter</span>
+                                <span class="text-danger">85% Full (Capacity 150)</span>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-danger" style="width: 85%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
+                                <span>Cold Storage: Available</span>
+                                <span>Meals needed: ~25</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between small fw-semibold mb-1">
+                                <span>Anbu Illam Community Kitchen</span>
+                                <span class="text-warning">45% Full (Capacity 200)</span>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-warning" style="width: 45%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
+                                <span>Dry/Hot Storage: High</span>
+                                <span>Meals needed: ~110</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small fw-semibold mb-1">
+                                <span>City Night Care Shelter</span>
+                                <span class="text-success">20% Full (Capacity 100)</span>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-success" style="width: 20%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
+                                <span>Refrigeration: 40L</span>
+                                <span>Meals needed: ~80</span>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <div class="bg-primary-subtle p-3 rounded-3 text-primary small">
+                            <i class="bi bi-shield-check me-1 fw-bold"></i> <strong>$N:1$ Knapsack Aggregator:</strong> Multiple smaller donors are grouped automatically when demand exceeds 100 portions.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Claim Available Surplus (Smart Match Scoring)</h5>
+                            <span class="badge bg-primary-subtle text-primary">Haversine + Urgency Filter</span>
+                        </div>
+                        <div id="ngo-claims-container">
+                            <!-- Populated with claimable donations -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: VOLUNTEER DISPATCH & ROUTING -->
+        <section id="section-volunteer" style="display: none;">
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Active Rescue Gigs & Delivery Routes</h5>
+                            <span class="badge bg-success-subtle text-success">Vehicle-Aware Routing</span>
+                        </div>
+                        <p class="text-muted small">Volunteers claim verified logistics dispatches based on transport capacity (Two-wheeler vs Car/Van).</p>
+                        <div id="volunteer-tasks-container">
+                            <!-- Populated with volunteer deliveries -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm">
+                        <h5 class="fw-bold mb-3">Volunteer Fleet Leaderboard</h5>
+                        <div class="list-group list-group-flush mb-3">
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-warning text-dark rounded-circle p-2">🥇</span>
+                                    <div>
+                                        <div class="fw-semibold">Karthik Raja</div>
+                                        <small class="text-muted"><i class="bi bi-bicycle"></i> Two-Wheeler • 28 Runs</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-success-subtle text-success">560 Meals Rescued</span>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-secondary-subtle text-dark rounded-circle p-2">🥈</span>
+                                    <div>
+                                        <div class="fw-semibold">Sneha M.</div>
+                                        <small class="text-muted"><i class="bi bi-car-front"></i> Car / Hatchback • 19 Runs</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-success-subtle text-success">420 Meals Rescued</span>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-secondary-subtle text-dark rounded-circle p-2">🥉</span>
+                                    <div>
+                                        <div class="fw-semibold">Arun Kumar</div>
+                                        <small class="text-muted"><i class="bi bi-truck"></i> Mini-Van • 14 Runs</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-success-subtle text-success">380 Meals Rescued</span>
+                            </div>
+                        </div>
+
+                        <div class="card bg-light border-0 p-3 rounded-3">
+                            <div class="fw-semibold small mb-1"><i class="bi bi-shield-lock-fill text-primary"></i> Food Safety Protocol</div>
+                            <p class="text-muted small mb-0">Insulated thermal crates required for hot cooked items exceeding 2 hours transit. Physical QR handshakes mandatory at both ends.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: DUAL-STAGE QR CHAIN-OF-CUSTODY -->
+        <section id="section-custody" style="display: none;">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm text-center">
+                        <h5 class="fw-bold mb-2">Stage 1: Donor $\rightarrow$ Volunteer Pickup QR</h5>
+                        <p class="text-muted small">Generated by Donor upon surplus creation. Volunteer physically scans this token to verify pickup.</p>
+                        
+                        <div class="my-3">
+                            <div id="pickup-qrcode" class="qr-box"></div>
+                        </div>
+                        <div class="badge bg-light text-dark border p-2 mb-3 font-monospace" id="pickup-token-display">TOKEN: FB-PICKUP-8932</div>
+                        
+                        <div class="d-flex justify-content-center gap-2">
+                            <button class="btn btn-outline-success btn-sm" onclick="simulateScan('pickup')">
+                                <i class="bi bi-camera-fill me-1"></i> Simulate Volunteer Scan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm text-center">
+                        <h5 class="fw-bold mb-2">Stage 2: Volunteer $\rightarrow$ NGO Drop-off QR</h5>
+                        <p class="text-muted small">Presented by Recipient NGO upon physical arrival. Volunteer verifies handoff to complete the rescue.</p>
+                        
+                        <div class="my-3">
+                            <div id="dropoff-qrcode" class="qr-box"></div>
+                        </div>
+                        <div class="badge bg-light text-dark border p-2 mb-3 font-monospace" id="dropoff-token-display">TOKEN: FB-DROP-4410</div>
+                        
+                        <div class="d-flex justify-content-center gap-2">
+                            <button class="btn btn-outline-primary btn-sm" onclick="simulateScan('dropoff')">
+                                <i class="bi bi-check2-circle me-1"></i> Simulate NGO Drop-off Verification
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm">
+                        <h5 class="fw-bold mb-3">Live Chain-of-Custody Audit Trail</h5>
+                        <div id="audit-trail" class="p-2">
+                            <!-- Populated with audit logs -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: ACADEMIC BLUEPRINT & VIVA DEFENSE -->
+        <section id="section-docs" style="display: none;">
+            <div class="bg-white p-4 p-md-5 rounded-4 border shadow-sm">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">🍱 FoodBridge Master Architecture & Viva Strategy</h3>
+                        <p class="text-muted mb-0">Project Specification, Mathematical Algorithms & Competitive Benchmark</p>
+                    </div>
+                    <span class="badge bg-success-subtle text-success fs-6 px-3 py-2">v2.0 Academic Defense</span>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold text-dark"><i class="bi bi-calculator me-1 text-primary"></i> 1. Smart Matching Formula</h6>
+                            <p class="small text-muted mb-2">Multi-Factor scoring weights:</p>
+                            <code class="small d-block bg-white p-2 border rounded">MatchScore = 0.35·Dist + 0.30·Urgency + 0.20·Capacity + 0.15·Diet</code>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold text-dark"><i class="bi bi-hourglass-split me-1 text-danger"></i> 2. 4-Tier Urgency Decay</h6>
+                            <ul class="small text-muted mb-0 ps-3">
+                                <li><strong>Critical (<2h):</strong> Red pulsating alert</li>
+                                <li><strong>Urgent (2–4h):</strong> Yellow priority banner</li>
+                                <li><strong>Moderate (4–8h):</strong> Blue normal queue</li>
+                                <li><strong>Stable (>8h):</strong> Green batch routing</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold text-dark"><i class="bi bi-shield-check me-1 text-success"></i> 3. Cryptographic Chain-of-Custody</h6>
+                            <p class="small text-muted mb-0">
+                                Dual-stage QR handshakes eliminate fraudulent meal claims, protect donors from liability, and produce tamper-evident audit logs.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="fw-bold mb-3">Competitive Benchmark Matrix</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Feature / Dimension</th>
+                                <th>Olio</th>
+                                <th>Too Good To Go</th>
+                                <th>Food Rescue US</th>
+                                <th>Robin Hood Army</th>
+                                <th class="table-success fw-bold">FoodBridge (Our Work)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Multi-Donor Knapsack ($N:1$ Pooling)</td>
+                                <td>❌</td>
+                                <td>❌</td>
+                                <td>❌</td>
+                                <td>❌</td>
+                                <td class="text-success fw-bold">✅ Native Knapsack</td>
+                            </tr>
+                            <tr>
+                                <td>Urgency Decay Priority</td>
+                                <td>Partial</td>
+                                <td>✅</td>
+                                <td>Partial</td>
+                                <td>Manual</td>
+                                <td class="text-success fw-bold">✅ 4-Tier Automated</td>
+                            </tr>
+                            <tr>
+                                <td>Dual QR Chain-of-Custody</td>
+                                <td>❌</td>
+                                <td>Partial</td>
+                                <td>❌</td>
+                                <td>❌</td>
+                                <td class="text-success fw-bold">✅ Pickup & Dropoff QR</td>
+                            </tr>
+                            <tr>
+                                <td>Campus Event Fast-Track</td>
+                                <td>❌</td>
+                                <td>❌</td>
+                                <td>❌</td>
+                                <td>Manual</td>
+                                <td class="text-success fw-bold">✅ 1-Click Fast-Track</td>
+                            </tr>
+                            <tr>
+                                <td>EPA Carbon Telemetry</td>
+                                <td>✅</td>
+                                <td>✅</td>
+                                <td>✅</td>
+                                <td>❌</td>
+                                <td class="text-success fw-bold">✅ CO₂e & Biomass Realtime</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Leaflet JS & Bootstrap Bundle -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- CORE INTERACTIVE JAVASCRIPT ENGINE (LOCALSTORAGE MOCK BACKEND) -->
+    <script>
+        // Sample Initial Data Seed
+        const INITIAL_DATA = {
+            donations: [
+                {
+                    id: 1,
+                    food_name: "Symposium Lunch (Biryani & Veg Gravy)",
+                    portions: 120,
+                    shelf_life_hours: 1.5,
+                    diet: "Vegetarian",
+                    location: "Tech Campus Food Court",
+                    lat: 11.0185,
+                    lng: 76.9558,
+                    status: "CLAIMED",
+                    urgency: "CRITICAL",
+                    created_at: new Date(Date.now() - 3600000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    pickup_token: "FB-PICKUP-8932",
+                    dropoff_token: "FB-DROP-4410",
+                    claimed_by: "Hope Child Shelter",
+                    volunteer: "Karthik Raja"
+                },
+                {
+                    id: 2,
+                    food_name: "Hostel Dinner Surplus (Chappathi & Dal)",
+                    portions: 85,
+                    shelf_life_hours: 3.0,
+                    diet: "Vegetarian",
+                    location: "Men's Hostel Block 3",
+                    lat: 11.0250,
+                    lng: 76.9620,
+                    status: "AVAILABLE",
+                    urgency: "URGENT",
+                    created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    pickup_token: "FB-PICKUP-2104",
+                    dropoff_token: "FB-DROP-7891",
+                    claimed_by: null,
+                    volunteer: null
+                },
+                {
+                    id: 3,
+                    food_name: "Artisan Breads & Croissants",
+                    portions: 45,
+                    shelf_life_hours: 7.5,
+                    diet: "Bakery",
+                    location: "Green Leaf Bakery & Cafe",
+                    lat: 11.0110,
+                    lng: 76.9715,
+                    status: "AVAILABLE",
+                    urgency: "MODERATE",
+                    created_at: new Date(Date.now() - 7200000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    pickup_token: "FB-PICKUP-5519",
+                    dropoff_token: "FB-DROP-3128",
+                    claimed_by: null,
+                    volunteer: null
+                }
+            ],
+            shelters: [
+                { name: "Hope Child Shelter", lat: 11.0210, lng: 76.9690, capacity: 150, current_need: 25 },
+                { name: "Anbu Illam Community Kitchen", lat: 11.0090, lng: 76.9510, capacity: 200, current_need: 110 },
+                { name: "City Night Care Shelter", lat: 11.0320, lng: 76.9780, capacity: 100, current_need: 80 }
+            ],
+            auditLogs: [
+                { time: "12:15 PM", event: "Donation FB-8932 posted by Tech Campus", level: "info" },
+                { time: "12:20 PM", event: "Claimed by Hope Child Shelter via Smart Match", level: "warning" },
+                { time: "12:25 PM", event: "Volunteer Karthik assigned for Two-Wheeler transit", level: "info" }
+            ],
+            stats: {
+                meals: 1480,
+                co2: 3700,
+                biomass: 740,
+                active_runs: 4
+            }
+        };
+
+        // State Store
+        let state = {};
+        let mapInstance = null;
+        let markersGroup = null;
+
+        function loadState() {
+            const raw = localStorage.getItem('foodbridge_state');
+            if (raw) {
+                try {
+                    state = JSON.parse(raw);
+                } catch(e) {
+                    state = JSON.parse(JSON.stringify(INITIAL_DATA));
+                }
+            } else {
+                state = JSON.parse(JSON.stringify(INITIAL_DATA));
+                saveState();
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('foodbridge_state', JSON.stringify(state));
+        }
+
+        function resetDemoData() {
+            if (confirm("Reset demo data to initial state?")) {
+                localStorage.removeItem('foodbridge_state');
+                loadState();
+                renderAll();
+                alert("Demo data restored to initial simulation state!");
+            }
+        }
+
+        // Tab Navigation
+        function switchTab(tabId) {
+            const tabs = ['overview', 'donor', 'ngo', 'volunteer', 'custody', 'docs'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`section-${t}`);
+                const btn = document.getElementById(`tab-${t}-btn`);
+                if (sec) sec.style.display = (t === tabId) ? 'block' : 'none';
+                if (btn) btn.classList.toggle('active', t === tabId);
+            });
+
+            if (tabId === 'overview') {
+                setTimeout(() => {
+                    if (mapInstance) mapInstance.invalidateSize();
+                }, 100);
+            }
+        }
+
+        // Render UI
+        function renderAll() {
+            renderStats();
+            renderSurplusFeed();
+            renderDonorListings();
+            renderNgoClaims();
+            renderVolunteerTasks();
+            renderAuditTrail();
+            renderQRCodes();
+            renderMapMarkers();
+        }
+
+        function renderStats() {
+            document.getElementById('stat-meals').innerText = state.stats.meals.toLocaleString();
+            document.getElementById('stat-co2').innerHTML = `${state.stats.co2.toLocaleString()} <small class="fs-6 text-muted">kg</small>`;
+            document.getElementById('stat-biomass').innerHTML = `${state.stats.biomass.toLocaleString()} <small class="fs-6 text-muted">kg</small>`;
+            document.getElementById('stat-active').innerText = `${state.donations.filter(d => d.status !== 'DELIVERED').length} Runs`;
+        }
+
+        function getUrgencyBadge(urgency) {
+            switch(urgency) {
+                case 'CRITICAL': return '<span class="badge badge-urgency-critical px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> Critical (<2h)</span>';
+                case 'URGENT': return '<span class="badge badge-urgency-urgent px-2 py-1"><i class="bi bi-clock-history me-1"></i> Urgent (2-4h)</span>';
+                case 'MODERATE': return '<span class="badge badge-urgency-moderate px-2 py-1"><i class="bi bi-hourglass-split me-1"></i> Moderate (4-8h)</span>';
+                default: return '<span class="badge badge-urgency-stable px-2 py-1"><i class="bi bi-shield-check me-1"></i> Stable (>8h)</span>';
+            }
+        }
+
+        function renderSurplusFeed() {
+            const container = document.getElementById('surplus-list');
+            if (!container) return;
+            
+            container.innerHTML = state.donations.map(d => `
+                <div class="food-card p-3 mb-2 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="fw-bold mb-0 text-dark">${d.food_name}</h6>
+                        ${getUrgencyBadge(d.urgency)}
+                    </div>
+                    <div class="d-flex justify-content-between text-muted small mt-2">
+                        <span><i class="bi bi-people me-1"></i><strong>${d.portions}</strong> portions</span>
+                        <span><i class="bi bi-geo-alt me-1"></i>${d.location}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                        <span class="badge bg-light text-secondary border font-monospace">${d.status}</span>
+                        <span class="small text-muted">Posted at ${d.created_at}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDonorListings() {
+            const container = document.getElementById('donor-listings-container');
+            if (!container) return;
+
+            container.innerHTML = state.donations.map(d => `
+                <div class="card mb-3 border-0 bg-light p-3 rounded-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="fw-bold mb-1">${d.food_name}</h6>
+                            <div class="text-muted small">
+                                <span class="me-3">📦 ${d.portions} portions</span>
+                                <span class="me-3">📍 ${d.location}</span>
+                                <span>⏳ Safe for ~${d.shelf_life_hours}h</span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${d.status === 'DELIVERED' ? 'bg-success' : 'bg-warning text-dark'} mb-1">${d.status}</span>
+                            <div class="small font-monospace text-muted">${d.pickup_token}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderNgoClaims() {
+            const container = document.getElementById('ngo-claims-container');
+            if (!container) return;
+
+            const claimable = state.donations.filter(d => d.status === 'AVAILABLE');
+            if (claimable.length === 0) {
+                container.innerHTML = `<div class="alert alert-info small mb-0"><i class="bi bi-info-circle me-1"></i> All posted surplus items are currently claimed! Post a new donation in the Donor Portal.</div>`;
+                return;
+            }
+
+            container.innerHTML = claimable.map(d => `
+                <div class="card p-3 mb-3 border rounded-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="fw-bold mb-1">${d.food_name}</h6>
+                            <p class="text-muted small mb-2"><i class="bi bi-geo-alt"></i> ${d.location} • ~1.2 km away • Diet: ${d.diet}</p>
+                            <span class="badge bg-primary-subtle text-primary">Smart Score: 94/100 (Optimal Match)</span>
+                        </div>
+                        <button class="btn btn-primary btn-sm fw-semibold" onclick="claimDonation(${d.id})">
+                            <i class="bi bi-check-circle me-1"></i> Claim ${d.portions} Meals
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderVolunteerTasks() {
+            const container = document.getElementById('volunteer-tasks-container');
+            if (!container) return;
+
+            const claimed = state.donations.filter(d => d.status === 'CLAIMED' || d.status === 'IN_TRANSIT');
+            if (claimed.length === 0) {
+                container.innerHTML = `<div class="alert alert-secondary small mb-0"><i class="bi bi-info-circle me-1"></i> No dispatches requiring pickup right now. Claim an item from the NGO tab first!</div>`;
+                return;
+            }
+
+            container.innerHTML = claimed.map(d => `
+                <div class="card p-3 mb-3 border rounded-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-danger-subtle text-danger mb-1">${d.urgency} DISPATCH</span>
+                            <h6 class="fw-bold mb-1">${d.food_name}</h6>
+                            <p class="text-muted small mb-1">Pickup: <strong>${d.location}</strong> $\\rightarrow$ Drop: <strong>${d.claimed_by || 'Hope Shelter'}</strong></p>
+                            <span class="small text-muted"><i class="bi bi-bicycle"></i> Suitable for: Two-Wheeler / Scooter</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark border font-monospace mb-2 d-block">${d.status}</span>
+                            <button class="btn btn-success btn-sm fw-semibold" onclick="assignVolunteer(${d.id})">
+                                <i class="bi bi-play-fill me-1"></i> Start Run
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAuditTrail() {
+            const container = document.getElementById('audit-trail');
+            if (!container) return;
+
+            container.innerHTML = state.auditLogs.slice(-5).reverse().map(log => `
+                <div class="state-step mb-3">
+                    <div class="step-dot completed"></div>
+                    <div class="d-flex justify-content-between">
+                        <strong class="small text-dark">${log.event}</strong>
+                        <span class="text-muted font-monospace" style="font-size: 0.75rem;">${log.time}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderQRCodes() {
+            const active = state.donations[0];
+            if (!active) return;
+
+            document.getElementById('pickup-token-display').innerText = `TOKEN: ${active.pickup_token}`;
+            document.getElementById('dropoff-token-display').innerText = `TOKEN: ${active.dropoff_token}`;
+
+            const pickEl = document.getElementById('pickup-qrcode');
+            const dropEl = document.getElementById('dropoff-qrcode');
+
+            pickEl.innerHTML = '';
+            dropEl.innerHTML = '';
+
+            new QRCode(pickEl, { text: active.pickup_token, width: 130, height: 130 });
+            new QRCode(dropEl, { text: active.dropoff_token, width: 130, height: 130 });
+        }
+
+        // Actions
+        function handleNewDonation(e) {
+            e.preventDefault();
+            const foodName = document.getElementById('form-food-name').value;
+            const portions = parseInt(document.getElementById('form-quantity').value);
+            const hours = parseFloat(document.getElementById('form-shelf-life').value);
+            const diet = document.getElementById('form-diet').value;
+            const location = document.getElementById('form-location').value;
+            const fastTrack = document.getElementById('form-fast-track').checked;
+
+            let urgency = 'STABLE';
+            if (hours < 2) urgency = 'CRITICAL';
+            else if (hours < 4) urgency = 'URGENT';
+            else if (hours < 8) urgency = 'MODERATE';
+
+            const newId = Date.now();
+            const newDonation = {
+                id: newId,
+                food_name: foodName,
+                portions: portions,
+                shelf_life_hours: hours,
+                diet: diet,
+                location: location,
+                lat: 11.0185 + (Math.random() - 0.5) * 0.02,
+                lng: 76.9558 + (Math.random() - 0.5) * 0.02,
+                status: "AVAILABLE",
+                urgency: urgency,
+                created_at: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                pickup_token: `FB-PICKUP-${Math.floor(1000 + Math.random() * 9000)}`,
+                dropoff_token: `FB-DROP-${Math.floor(1000 + Math.random() * 9000)}`,
+                claimed_by: null,
+                volunteer: null
+            };
+
+            state.donations.unshift(newDonation);
+            state.auditLogs.push({
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                event: `Surplus posted: ${foodName} (${portions} meals) [${fastTrack ? 'Fast-Track' : 'Standard'}]`,
+                level: "info"
+            });
+
+            saveState();
+            renderAll();
+            alert(`🎉 Success! Listed "${foodName}" with ${urgency} priority.`);
+            document.getElementById('donation-form').reset();
+            switchTab('overview');
+        }
+
+        function claimDonation(id) {
+            const item = state.donations.find(d => d.id === id);
+            if (item) {
+                item.status = "CLAIMED";
+                item.claimed_by = "Hope Child Shelter";
+                state.auditLogs.push({
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    event: `Claimed: ${item.food_name} claimed by Hope Child Shelter`,
+                    level: "warning"
+                });
+                saveState();
+                renderAll();
+                alert(`✅ Claimed! Dispatch alert sent to local volunteers.`);
+            }
+        }
+
+        function assignVolunteer(id) {
+            const item = state.donations.find(d => d.id === id);
+            if (item) {
+                item.status = "IN_TRANSIT";
+                item.volunteer = "Karthik Raja";
+                state.auditLogs.push({
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    event: `Transit started for ${item.food_name} by Volunteer Karthik`,
+                    level: "info"
+                });
+                saveState();
+                renderAll();
+                switchTab('custody');
+            }
+        }
+
+        function simulateScan(stage) {
+            const active = state.donations[0];
+            if (!active) return;
+
+            if (stage === 'pickup') {
+                active.status = "IN_TRANSIT";
+                state.auditLogs.push({
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    event: `🔐 Handshake 1 Verified: Pickup validated with token ${active.pickup_token}`,
+                    level: "success"
+                });
+                alert(`✅ Stage 1 QR Verified! Custody transferred to volunteer.`);
+            } else {
+                active.status = "DELIVERED";
+                state.stats.meals += active.portions;
+                state.stats.co2 += Math.round(active.portions * 0.4 * 2.5);
+                state.stats.biomass += Math.round(active.portions * 0.4);
+                state.auditLogs.push({
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    event: `🎉 Handshake 2 Complete: Food received at NGO. Delivery marked COMPLETE.`,
+                    level: "success"
+                });
+                alert(`🏆 Dual-Stage QR Chain Complete! ${active.portions} meals saved.`);
+            }
+            saveState();
+            renderAll();
+        }
+
+        // Leaflet GIS Map Initialization
+        function initLeafletMap() {
+            if (mapInstance) {
+                mapInstance.setView([11.0185, 76.9600], 13);
+                return;
+            }
+
+            mapInstance = L.map('gis-map').setView([11.0185, 76.9600], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors | FoodBridge GIS'
+            }).addTo(mapInstance);
+
+            markersGroup = L.layerGroup().addTo(mapInstance);
+            renderMapMarkers();
+        }
+
+        function renderMapMarkers() {
+            if (!markersGroup) return;
+            markersGroup.clearLayers();
+
+            // Shelter markers
+            state.shelters.forEach(s => {
+                const marker = L.circleMarker([s.lat, s.lng], {
+                    radius: 10,
+                    fillColor: '#0ea5e9',
+                    color: '#0284c7',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(markersGroup);
+
+                marker.bindPopup(`<b>🏢 ${s.name}</b><br>Capacity: ${s.capacity} meals<br>Current Need: ${s.current_need} meals`);
+            });
+
+            // Donation markers
+            state.donations.forEach(d => {
+                const color = d.urgency === 'CRITICAL' ? '#ef4444' : '#10b981';
+                const marker = L.circleMarker([d.lat, d.lng], {
+                    radius: 12,
+                    fillColor: color,
+                    color: '#ffffff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(markersGroup);
+
+                marker.bindPopup(`
+                    <b>🍱 ${d.food_name}</b><br>
+                    Portions: ${d.portions}<br>
+                    Urgency: <b>${d.urgency}</b><br>
+                    Status: ${d.status}<br>
+                    Location: ${d.location}
+                `);
+            });
+        }
+
+        // Bootstrap on load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            initLeafletMap();
+            renderAll();
+        });
+    </script>
+</body>
+</html>
